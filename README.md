@@ -18,6 +18,8 @@ cd ..
 ```
 
 ## Usage
-`jupyter notebook`
-Open example.ipynb in python directory
-Run code block
+```
+jupyter notebook
+```
+- Open example.ipynb in python directory
+- Run code block
