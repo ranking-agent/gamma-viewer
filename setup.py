@@ -22,7 +22,7 @@ class develop(_develop):
 
 
 setup(
-    name='react-jupyter-widget-template',
+    name='react-jupyter-widget',
     cmdclass={'develop': develop},
     version='0.0.1',
     description='An example wrapper around react components for use in jupyter notebooks',
@@ -36,6 +36,7 @@ setup(
     install_requires=[
         "ipython",
         "jupyter-react",
-        "ipywidgets"
+        "ipywidgets",
+        "notebook"
     ]
 )

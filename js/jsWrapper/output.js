@@ -1,3 +1,4 @@
+import ReactDOM from 'react-dom';
 /**
  * Output
  * defines an output area for a code cell where react components will render themselves into
@@ -7,7 +8,8 @@
 function Output( cell ) {
 
   this.clear = () => {
-    this.subarea.innerHTML = '';      
+    ReactDOM.unmountComponentAtNode(this.subarea);
+    // this.subarea.innerHTML = '';
   };
 
   const area = document.createElement( 'div' );

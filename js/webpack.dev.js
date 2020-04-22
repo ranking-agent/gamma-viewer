@@ -4,6 +4,9 @@ const config = {
   entry: ['babel-polyfill', './index.js'],
   devtool: 'cheap-module-eval-source-map',
   mode: 'development',
+  node: {
+    fs: 'empty',
+  },
   module: {
     rules: [
       {
@@ -32,6 +35,11 @@ const config = {
       {
         test: /\.(ttf|eot|svg|woff(2)?)(\?[a-z0-9=&.]+)?$/,
         loader: 'url-loader',
+      },
+      {
+        test: /\.ya?ml$/,
+        type: 'json', // Required by Webpack v4
+        use: 'yaml-loader',
       },
     ],
   },

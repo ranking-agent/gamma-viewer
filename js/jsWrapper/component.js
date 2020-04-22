@@ -62,8 +62,6 @@ class Component extends React.Component {
         components
       } 
     } = this;
-    console.log('props', this.props);
-    console.log('renderprops', this.state.renderProps);
 
     return ( 
       <div>
