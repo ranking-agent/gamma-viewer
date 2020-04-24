@@ -44,8 +44,8 @@ const config = {
     ],
   },
   output: {
-    path: path.resolve(__dirname, '../pack', 'static'),
-    publicPath: '../pack/static',
+    path: path.resolve(__dirname, '../GammaViewer', 'static'),
+    publicPath: '../GammaViewer/static',
     filename: 'bundle.js',
     libraryTarget: 'umd',
   },

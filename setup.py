@@ -5,7 +5,7 @@ from notebook.nbextensions import install_nbextension
 from notebook.services.config import ConfigManager
 import os
 
-extension_dir = os.path.join(os.path.dirname(__file__), "pack", "static")
+extension_dir = os.path.join(os.path.dirname(__file__), "GammaViewer", "static")
 
 
 class develop(_develop):
@@ -15,10 +15,10 @@ class develop(_develop):
         """Install and enable notebook extension."""
         _develop.run(self)
         install_nbextension(extension_dir, symlink=True,
-                            overwrite=True, user=False, destination="pack",
+                            overwrite=True, user=False, destination="GammaViewer",
                             sys_prefix=True)
         cm = ConfigManager()
-        cm.update('notebook', {"load_extensions": {"pack/bundle": True}})
+        cm.update('notebook', {"load_extensions": {"GammaViewer/bundle": True}})
 
 
 setup(
@@ -30,9 +30,9 @@ setup(
     author='Max Wang',
     author_email='max@covar.com',
     license='MIT',
-    packages=['pack'],
+    packages=['GammaViewer'],
     zip_safe=False,
-    data_files=[('share/jupyter/nbextensions/pack', ['pack/static/bundle.js'])],
+    data_files=[('share/jupyter/nbextensions/GammaViewer', ['GammaViewer/static/bundle.js'])],
     install_requires=[
         "ipython",
         "jupyter-react",
