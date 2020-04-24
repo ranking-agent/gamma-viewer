@@ -18,7 +18,6 @@ const styles = {
 };
 
 export default function AnswerGraph(props) {
-  console.log('rendering answer graph');
   const {
     subgraph, layoutStyle, callbackOnGraphClick, height,
     varyEdgeSmoothRoundness, omitEdgeLabel, showSupport,

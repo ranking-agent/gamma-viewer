@@ -1,0 +1,7 @@
+.pagination {
+    display: flex;
+    justify-content: space-between;
+}
+.pagination button {
+    width: 320px;
+}

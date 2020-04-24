@@ -84,7 +84,26 @@ export default function useAnswerViewer(msg) {
     return graph.edges.find((edge) => edge.id === edgeId);
   }
 
-  function getKGNode(nodeId) {
+  function getQNodeIds() {
+    const qNodeIds = [];
+    message.query_graph.nodes.forEach((n) => {
+      qNodeIds.push(n.id);
+    });
+    return qNodeIds;
+  }
+  function getQEdgeIds() {
+    const qEdgeIds = [];
+    message.query_graph.edges.forEach((e) => {
+      qEdgeIds.push(e.id);
+    });
+    return qEdgeIds;
+  }
+
+  function getQgNode(id) {
+    return message.query_graph.nodes[idToIndMaps.qgNodeMap.get(id)];
+  }
+
+  function getKgNode(nodeId) {
     return message.knowledge_graph.nodes[idToIndMaps.kgNodeMap.get(nodeId)];
   }
 
@@ -257,7 +276,7 @@ export default function useAnswerViewer(msg) {
           // Use that numQgNodes Nodes Type
           node.type = qNodes[qNodeIndex].type;
           if (node.type === 'named_thing') { // we don't actually want any named_things
-            let kgNodeType = getKGNode(node.id).type;
+            let kgNodeType = getKgNode(node.id).type;
             if (!Array.isArray(kgNodeType)) { // so the type will always be an array
               kgNodeType = [kgNodeType];
             }
@@ -271,10 +290,114 @@ export default function useAnswerViewer(msg) {
     return {};
   }
 
+  // Returns formatted answerset data for tabular display
+  // {
+  //   answers: [{ nodes: {n0: {name: , id: , type: , isSet, setNodes?: }, n1: {}, ...}, score: -1 }, {}, ...],
+  //   columnHeaders: [{ Header: 'n01: Gene', id: 'n01', isSet: false, type: 'gene'}, {}, ...],
+  // }
+  function answerSetTableData() {
+    const columnHeaders = [];
+    const answers = [];
+    // set the column headers object
+    message.query_graph.nodes.forEach((n) => {
+      if (!n.type) {
+        console.log(n);
+        n.type = 'undefined';
+      }
+      columnHeaders.push({
+        Header: `${n.id}: ${entityNameDisplay(n.type)}`,
+        id: n.id,
+        isSet: n.set,
+        type: n.type,
+      });
+    });
+    // get the names and score from each answer for the table
+    message.results.forEach((ans) => {
+      const nodeBindings = ans.node_bindings;
+      const answer = {};
+      Object.keys(nodeBindings).forEach((qnodeId) => {
+        let kNodeIds = nodeBindings[qnodeId];
+        if (!Array.isArray(kNodeIds)) {
+          kNodeIds = [kNodeIds];
+        }
+        answer[qnodeId] = [];
+        kNodeIds.forEach((kNodeId) => {
+          const kNode = getKgNode(kNodeId);
+          if (kNode) {
+            answer[qnodeId].push({
+              name: kNode.name,
+              id: kNode.id,
+            });
+          } else {
+            answer[qnodeId].push({
+              name: 'Missing Node',
+            });
+            unknownNodes = true;
+          }
+        });
+      });
+      answer.score = ans.score;
+      answer.id = ans.id;
+      answers.push(answer);
+    });
+    return { columnHeaders, answers };
+  }
+
+  // builds dense answer
+  function getDenseAnswer(answerId) {
+    const qNodeIds = getQNodeIds();
+    const qEdgeIds = getQEdgeIds();
+    const kg = message.knowledge_graph;
+    const { kgEdgeMap } = idToIndMaps;
+    const answer = message.answers[answerId];
+    const ansObj = {
+      score: answer.score, nodes: {}, edges: {}, id: answer.id,
+    };
+    qNodeIds.forEach((qNodeId) => {
+      const qNode = getQgNode(qNodeId);
+      let nodeListObj = { type: qNode.type, isSet: false };
+      const knodeIds = answer.node_bindings[qNodeId];
+      if (!Array.isArray(knodeIds)) {
+        // This is not a set node
+        if (('set' in qNode) && qNode.set) {
+          // Actually a set but only has one element
+          nodeListObj = { type: qNode.type, name: `Set: ${entityNameDisplay(qNode.type)}`, isSet: true };
+          nodeListObj.setNodes = [knodeIds].map((kgNodeId) => getKgNode(kgNodeId));
+        } else {
+          // for real, not a set
+          nodeListObj = { ...getKgNode(knodeIds), ...nodeListObj };
+        }
+      } else if ((knodeIds.length === 1) && ('set' in qNode) && !qNode.set) {
+        // This is not a set node but, for some reason is an array
+
+        nodeListObj = { ...getKgNode(knodeIds[0]), ...nodeListObj };
+      } else {
+        // Set
+        nodeListObj = { type: qNode.type, name: `Set: ${entityNameDisplay(qNode.type)}`, isSet: true };
+        nodeListObj.setNodes = knodeIds.map((kgNodeId) => getKgNode(kgNodeId));
+      }
+      ansObj.nodes[qNodeId] = nodeListObj;
+    });
+    qEdgeIds.forEach((qEdgeId) => {
+      let cEdgeIds = [];
+      if (!Array.isArray(answer.edge_bindings[qEdgeId])) { // Just a single id
+        cEdgeIds = [answer.edge_bindings[qEdgeId]];
+      } else { // we already have an array.
+        cEdgeIds = answer.edge_bindings[qEdgeId];
+      }
+      ansObj.edges[qEdgeId] = cEdgeIds.map((eid) => kg.edges[kgEdgeMap.get(eid)]);
+    });
+
+    return ansObj;
+  }
+
   return {
     message,
     annotatedPrunedKnowledgeGraph,
     numKgNodes: numNodes('knowledge_graph'),
     numQgNodes: numNodes('query_graph'),
+    answerSetTableData,
+    getDenseAnswer,
+    unknownNodes,
   };
 }

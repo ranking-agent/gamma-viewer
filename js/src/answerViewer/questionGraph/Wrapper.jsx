@@ -1,5 +1,4 @@
 import React from 'react';
-import { toJS } from 'mobx';
 import Paper from '@material-ui/core/Paper';
 import QuestionGraph from './QuestionGraph';
 

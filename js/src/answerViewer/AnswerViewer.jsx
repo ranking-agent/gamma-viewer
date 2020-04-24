@@ -4,7 +4,7 @@ import Tab from '@material-ui/core/Tab';
 import Paper from '@material-ui/core/Paper';
 
 import QuestionGraph from './questionGraph/Wrapper';
-// import AnswerTable from './answerTable/AnswerTable';
+import AnswerTable from './answerTable/AnswerTable';
 import KnowledgeGraph from './knowledgeGraph/KnowledgeGraph';
 import useAnswerViewer from '../customHooks/useAnswerViewer';
 
@@ -39,11 +39,11 @@ export default function AnswerViewer(props) {
             store={answersetStore}
             tab={tabKey}
           />
-          {/* <AnswerTable
+          <AnswerTable
             concepts={concepts}
             store={answersetStore}
             tab={tabKey}
-          /> */}
+          />
           <KnowledgeGraph
             concepts={concepts}
             store={answersetStore}
