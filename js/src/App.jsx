@@ -10,11 +10,15 @@ export default function App(props) {
   // console.log('Props from Jupyter Notebook:', props);
   const { data } = props;
   const { concepts } = config;
-  if (!validateMessage(data)) {
+  const msg = validateMessage(data);
+  if (!msg.valid) {
     return (
-      <div>
-        Bad message. Please make sure your message is formatted correctly.
-      </div>
+      <>
+        <h4>Invalid message. Errors:</h4>
+        {msg.errors.map((err) => (
+          <p>{`${err.dataPath}: ${err.keyword} ${err.message}`}</p>
+        ))}
+      </>
     );
   }
   const message = ingestMessage(data);
