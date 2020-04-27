@@ -15,8 +15,8 @@ export default function App(props) {
     return (
       <>
         <h4>Invalid message. Errors:</h4>
-        {msg.errors.map((err) => (
-          <p>{`${err.dataPath}: ${err.keyword} ${err.message}`}</p>
+        {msg.errors.map((err, i) => (
+          <p key={i}>{`${err.dataPath}: ${err.keyword} ${err.message}`}</p>
         ))}
       </>
     );
