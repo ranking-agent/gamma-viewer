@@ -1,5 +1,5 @@
 import React from 'react';
-import { Row, Col } from 'react-bootstrap';
+// import { Row, Col } from 'react-bootstrap';
 import { AutoSizer, List } from 'react-virtualized';
 import PubmedEntry from './PubmedEntry';
 

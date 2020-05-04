@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import IconButton from '@material-ui/core/IconButton';
+import ArrowRightIcon from '@material-ui/icons/ArrowRight';
+import ArrowDropDownIcon from '@material-ui/icons/ArrowDropDown';
 // import { DropdownList } from 'react-widgets';
 
-// import AnswersetFilter from './AnswersetFilter';
-// import AnswersetTableSubComponent, { answersetSubComponentEnum } from './tableSubcomponent/TableSubcomponent';
+import AnswersetFilter from './AnswersetFilter';
 import entityNameDisplay from '../../../utils/entityNameDisplay';
 import getNodeTypeColorMap from '../../../utils/colorUtils';
 import getColumnWidth from '../../../utils/rtColumnWidth';
@@ -16,23 +18,11 @@ export default function AnswerTable(props) {
   const { store, tab, concepts } = props;
   const [columns, setColumns] = useState([]);
   const [results, setResults] = useState([]);
-  const [expanded, setExpanded] = useState({});
 
-  // SubComponent displayed when expanding a Node column in table that represents a Set
-  // subComponentFactory = ({nodeId = null, activeButtonKey = answersetSubComponentEnum.graph} = {}) => (rowInfo) => { // eslint-disable-line
-  //   // console.log('rowInfo', rowInfo, 'nodeId / activeButtonKey', nodeId, activeButtonKey);
-  //   return (
-  //     <AnswersetTableSubComponent
-  //       rowInfo={rowInfo}
-  //       store={this.props.store}
-  //       activeButtonKey={activeButtonKey}
-  //       nodeId={nodeId}
-  //       concepts={this.props.concepts}
-  //     />
-  //   );
-  // };
-
-  // isSelected = (rowInfo) => Boolean(this.state.expanded[rowInfo.viewIndex]);
+  const onExpand = useCallback((row, toggleAllRowsExpanded) => {
+    toggleAllRowsExpanded(false);
+    row.toggleRowExpanded(!row.isExpanded);
+  }, []);
 
   // Filter method for table columns that is case-insensitive, and matches all rows that contain
   // provided sub-string
@@ -87,19 +77,31 @@ export default function AnswerTable(props) {
         colSpecObj.width = getColumnWidth(data, colSpecObj.accessor, colSpecObj.Header);
       }
       // this initializes the filter object for all nodes
-      // store.initializeFilter();
-      // colSpecObj.Filter = props =>
-      //   (<AnswersetFilter
-      //     {...props}
-      //     qnodeId={nodeId}
-      //     store={store}
-      //   />);
+      store.initializeFilter();
+      colSpecObj.Filter = (answersetFilterProps) => (
+        <AnswersetFilter
+          {...answersetFilterProps}
+          qnodeId={nodeId}
+          store={store}
+        />
+      );
       const backgroundColor = bgColorMap(colSpecObj.type);
       const columnHeader = colSpecObj.Header;
       colSpecObj.Header = () => (
         <div style={{ backgroundColor }}>{columnHeader}</div>
       );
       return colSpecObj;
+    });
+    colHeaders.unshift({
+      // Make an expander cell
+      Header: () => null, // No header
+      id: 'expander', // It needs an ID
+      Cell: ({ row, toggleAllRowsExpanded }) => (
+        <IconButton onClick={() => onExpand(row, toggleAllRowsExpanded)}>
+          {row.isExpanded ? <ArrowDropDownIcon /> : <ArrowRightIcon />}
+        </IconButton>
+      ),
+      width: 50,
     });
     // Add Score column at the end
     colHeaders.push({
@@ -136,23 +138,6 @@ export default function AnswerTable(props) {
     }
   }, [tab]);
 
-  /**
-   * Method to update table subcomponent and toggle expanded state of table appropriately
-   * This method works around react-table limitations to enable multiple sub-components on
-   * a per-column basis
-   * @param {Int} rowIndex Index of the row clicked by the user
-   * @param {JSX} newSubComponent
-   */
-  // updateTableSubComponent(rowIndex, newSubComponent) {
-  //   const expanded = {};
-  //   expanded[rowIndex] = this.state.expanded[rowIndex] ? false : true; // eslint-disable-line no-unneeded-ternary
-  //   this.setState({ tableSubComponent: newSubComponent, expanded });
-  // }
-
-  // function clearExpanded() {
-  //   this.setState({ expanded: {} });
-  // }
-
   // function getFiltered() {
   //   // this gets the actual filtered answers directly from the table. this.reactTable is a ref set below in the component
   //   const filteredAnswers = this.reactTable.getResolvedState().sortedData;
@@ -166,59 +151,12 @@ export default function AnswerTable(props) {
       {tab === 1 && (
         <>
           {results.length ? (
-            <div style={{ marginBottom: '10px', position: 'relative' }}>
-              <Table columns={columns} data={results} />
-              {/* <ReactTable
-                ref={(r) => { this.reactTable = r; }}
-                data={answers}
-                columns={column}
-                defaultPageSize={10}
-                defaultFilterMethod={this.defaultFilterMethod}
-                pageSizeOptions={[5, 10, 15, 20, 25, 30, 50]}
-                minRows={10}
-                filterable
-                onFilteredChange={this.getFiltered}
-                className="-highlight"
-                collapseOnDataChange={false}
-                onPageChange={this.clearExpanded}
-                onSortedChange={this.clearExpanded}
-                // SubComponent={tableSubComponent}
-                // expanded={expanded}
-                defaultSorted={[
-                  {
-                    id: 'score',
-                    desc: true,
-                  },
-                ]}
-                // getTdProps={(state, rowInfo, column, instance) => { // eslint-disable-line
-                //   return {
-                //     onClick: (e, handleOriginal) => {
-                //       // IMPORTANT! React-Table uses onClick internally to trigger
-                //       // events like expanding SubComponents and pivots.
-                //       // By default a custom 'onClick' handler will override this functionality.
-                //       // If you want to fire the original onClick handler, call the
-                //       // 'handleOriginal' function.
-                //       if (handleOriginal) {
-                //         handleOriginal();
-                //       }
-                //       // Trigger appropriate subcomponent depending on where user clicked
-                //       if (column.isSet) { // Handle user clicking on a "Set" element in a row
-                //         const newSubComponent = this.subComponentFactory({
-                //           nodeId: column.id,
-                //           activeButtonKey: answersetSubComponentEnum.metadata,
-                //         });
-                //         this.updateTableSubComponent(rowInfo.viewIndex, newSubComponent);
-                //       } else if (column.expander) { // Handle user clicking on the row Expander element (1st column)
-                //         this.updateTableSubComponent(rowInfo.viewIndex, this.subComponentFactory());
-                //       }
-                //     },
-                //   };
-                // }}
-                // getTrProps={(state, rowInfo) => ({
-                //       className: rowInfo ? (this.isSelected(rowInfo) ? 'selected-row' : '') : '', // eslint-disable-line no-nested-ternary
-                //     })
-                //   }
-              /> */}
+            <div id="answerTableContainer">
+              <Table
+                columns={columns}
+                data={results}
+                store={store}
+              />
             </div>
           ) : (
             <div>

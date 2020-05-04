@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Paper from '@material-ui/core/Paper';
-import Popover from '@material-ui/core/Popover';
+import ClickAwayListener from '@material-ui/core/ClickAwayListener';
+import Popper from '@material-ui/core/Popper';
 import Button from '@material-ui/core/Button';
 import Slider from '@material-ui/core/Slider';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
@@ -51,47 +52,6 @@ export default function KnowledgeGraph(props) {
               position: 'relative', minHeight: '200px', display: 'table', width: '100%',
             }}
           >
-            <div className="graphPopover">
-              <Button
-                style={{
-                  width: '100%', textAlign: 'center', cursor: 'pointer', padding: '10px',
-                }}
-                onClick={(e) => setAnchorEl(anchorEl ? null : e.target)}
-                variant="contained"
-              >
-                Graph Options
-                <FaAngleDown />
-              </Button>
-              <Popover
-                open={Boolean(anchorEl)}
-                anchorEl={anchorEl}
-                onClose={() => setAnchorEl(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-              >
-                <div className="popoverDiv">
-                  {store.numKgNodes !== committedPruneNum ? (
-                    `Pruned graph showing top ${committedPruneNum} nodes`
-                  ) : (
-                    'Prune Graph'
-                  )}
-                  <Slider
-                    value={localPruneNum}
-                    onChange={(e, v) => updateLocalPruneNum(v)}
-                    onChangeCommitted={(e, v) => setCommittedPruneNum(v)}
-                    min={store.numQgNodes}
-                    max={store.numKgNodes}
-                    ValueLabelComponent={SliderLabel}
-                  />
-                  <FormControlLabel
-                    control={
-                      <Checkbox checked={hierarchical} onChange={(e) => toggleHierarchy(e.target.checked)} />
-                    }
-                    label="Hierarchical"
-                  />
-                </div>
-              </Popover>
-            </div>
             <AnswerGraph
               subgraph={kg}
               concepts={concepts}
@@ -101,6 +61,46 @@ export default function KnowledgeGraph(props) {
               omitEdgeLabel
               callbackOnGraphClick={graphClickCallback.current}
             />
+            <ClickAwayListener onClickAway={() => setAnchorEl(null)}>
+              <div className="graphPopover">
+                <Button
+                  style={{
+                    width: '100%', textAlign: 'center', cursor: 'pointer', padding: '10px',
+                  }}
+                  onClick={(e) => setAnchorEl(anchorEl ? null : e.target)}
+                  variant="contained"
+                >
+                  Graph Options
+                  <FaAngleDown />
+                </Button>
+                <Popper
+                  open={Boolean(anchorEl)}
+                  anchorEl={anchorEl}
+                >
+                  <div className="popoverDiv">
+                    {store.numKgNodes !== committedPruneNum ? (
+                      `Pruned graph showing top ${committedPruneNum} nodes`
+                    ) : (
+                      'Prune Graph'
+                    )}
+                    <Slider
+                      value={localPruneNum}
+                      onChange={(e, v) => updateLocalPruneNum(v)}
+                      onChangeCommitted={(e, v) => setCommittedPruneNum(v)}
+                      min={store.numQgNodes}
+                      max={store.numKgNodes}
+                      ValueLabelComponent={SliderLabel}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox checked={hierarchical} onChange={(e) => toggleHierarchy(e.target.checked)} />
+                      }
+                      label="Hierarchical"
+                    />
+                  </div>
+                </Popper>
+              </div>
+            </ClickAwayListener>
           </div>
         </Paper>
       )}

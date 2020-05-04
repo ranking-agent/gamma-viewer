@@ -4,6 +4,7 @@ import _ from 'lodash';
 
 import entityNameDisplay from '../../utils/entityNameDisplay';
 import useFilter from './useFilter';
+import config from '../../config.json';
 
 const makeEmptyArray = (len, init) => {
   const array = new Array(len);
@@ -13,11 +14,14 @@ const makeEmptyArray = (len, init) => {
 
 export default function useAnswerViewer(msg) {
   const [message, updateMessage] = useState(msg);
-  const [activeAnswerId, updateActiveAnswerId] = useState(null);
-  const [denseAnswer, updateDenseAnswer] = useState({});
+  // const [activeAnswerId, updateActiveAnswerId] = useState(null);
+  // const [denseAnswer, updateDenseAnswer] = useState({});
   const [numAgSetNodes, updateNumAgSetNodes] = useState(10);
   const [idToIndMaps, setIdToIndMaps] = useState(null);
-  const filter = useFilter();
+  const [filter, setFilter] = useState({});
+  const [filterKeys, setFilterKeys] = useState({});
+  const [searchedFilter, updateSearchedFilter] = useState({});
+  const [filteredAnswers, setFilteredAnswers] = useState({});
 
   useEffect(() => {
     message.results.forEach((a, i) => {
@@ -25,7 +29,7 @@ export default function useAnswerViewer(msg) {
         a.id = i;
       }
     });
-    updateActiveAnswerId(message.results[0].id);
+    // updateActiveAnswerId(message.results[0].id);
   }, []);
 
   const keyBlacklist = ['isSet', 'labels', 'equivalent_identifiers', 'type', 'id', 'degree'];
@@ -134,8 +138,9 @@ export default function useAnswerViewer(msg) {
 
       // Iterate through each node in knowledgeGraph and score them
       kg.nodes.forEach((node) => {
-        node.scoreVector = makeEmptyArray(numQgNodes, 0);
-        node.count = makeEmptyArray(numQgNodes, 0);
+        const kgNode = _.cloneDeep(node);
+        kgNode.scoreVector = makeEmptyArray(numQgNodes, 0);
+        kgNode.count = makeEmptyArray(numQgNodes, 0);
         // Iterate through each answer
         results.forEach((ans) => {
           const { node_bindings: nodeBindings } = ans;
@@ -143,38 +148,38 @@ export default function useAnswerViewer(msg) {
           Object.keys(nodeBindings).forEach((nodeBinding) => {
             let isMatch = false;
             if (Array.isArray(nodeBindings[nodeBinding])) {
-              if (nodeBindings[nodeBinding].indexOf(node.id) > -1) {
+              if (nodeBindings[nodeBinding].indexOf(kgNode.id) > -1) {
                 isMatch = true;
               }
-            } else if (nodeBindings[nodeBinding] === node.id) {
+            } else if (nodeBindings[nodeBinding] === kgNode.id) {
               isMatch = true;
             }
             // Update score for qNode position in scoreVector since this kGNode was
             // referenced in this answer
             // sometimes results don't have scores
             if (isMatch) {
-              node.count[idToIndMaps.qgNodeMap.get(nodeBinding)] += 1;
+              kgNode.count[idToIndMaps.qgNodeMap.get(nodeBinding)] += 1;
               if (ans.score !== undefined) {
-                node.scoreVector[idToIndMaps.qgNodeMap.get(nodeBinding)] += ans.score;
+                kgNode.scoreVector[idToIndMaps.qgNodeMap.get(nodeBinding)] += ans.score;
               }
             }
           });
         });
-        node.aggScore = node.scoreVector.reduce((a, b) => a + b, 0);
+        kgNode.aggScore = kgNode.scoreVector.reduce((a, b) => a + b, 0);
         // Update qgNodeIdToScoreObjArrMap with this node for any non-zero
         // qNodeScore (Meaning that this node was referenced one or more times by
         // the corresponding qNode for qNodeInd)
-        node.scoreVector.forEach((qNodeScore, qNodeInd) => {
+        kgNode.scoreVector.forEach((qNodeScore, qNodeInd) => {
           if (qNodeScore > 0) {
             qgNodeIdToScoreObjArrMap[qgNodeIndToIdMap[qNodeInd]].push({
-              scoreVector: node.scoreVector, aggScore: node.aggScore, id: node.id,
+              scoreVector: kgNode.scoreVector, aggScore: kgNode.aggScore, id: kgNode.id,
             });
           }
         });
-        node.count.forEach((count, qNodeInd) => {
+        kgNode.count.forEach((count, qNodeInd) => {
           if (count > 0) {
             qgNodeIdToCountMap[qgNodeIndToIdMap[qNodeInd]].push({
-              count, id: node.id,
+              count, id: kgNode.id,
             });
           }
         });
@@ -300,10 +305,6 @@ export default function useAnswerViewer(msg) {
     const answers = [];
     // set the column headers object
     message.query_graph.nodes.forEach((n) => {
-      if (!n.type) {
-        console.log(n);
-        n.type = 'undefined';
-      }
       columnHeaders.push({
         Header: `${n.id}: ${entityNameDisplay(n.type)}`,
         id: n.id,
@@ -349,7 +350,7 @@ export default function useAnswerViewer(msg) {
     const qEdgeIds = getQEdgeIds();
     const kg = message.knowledge_graph;
     const { kgEdgeMap } = idToIndMaps;
-    const answer = message.answers[answerId];
+    const answer = message.results[answerId];
     const ansObj = {
       score: answer.score, nodes: {}, edges: {}, id: answer.id,
     };
@@ -367,7 +368,7 @@ export default function useAnswerViewer(msg) {
           // for real, not a set
           nodeListObj = { ...getKgNode(knodeIds), ...nodeListObj };
         }
-      } else if ((knodeIds.length === 1) && ('set' in qNode) && !qNode.set) {
+      } else if ((knodeIds.length === 1) && !qNode.set) {
         // This is not a set node but, for some reason is an array
 
         nodeListObj = { ...getKgNode(knodeIds[0]), ...nodeListObj };
@@ -391,13 +392,329 @@ export default function useAnswerViewer(msg) {
     return ansObj;
   }
 
+  // Returns subgraphViewer compatible format graph spec { nodes: {}, edges: {} }
+  function activeAnswerGraph(activeAnswerId) {
+    const ansIdMap = ansIdToIndMap();
+    const answer = message.results[ansIdMap.get(activeAnswerId)];
+    const graph = { nodes: [], edges: [] };
+
+    // We could loop through the qNodes to find out what nodes are in this answer
+    // But there might be extra nodes or edges in this answer
+    // This happens with literature edges, they aren't in qgraph but they are in answers
+    const nodeBindingsMap = new Map(Object.entries(answer.node_bindings));
+    // So we loop through the keys in node_bindings
+    nodeBindingsMap.forEach((val, keyId) => {
+      const newNodes = [];
+      const qNode = getQgNode(keyId);
+      const nodeIds = val;
+      let nodes = [];
+      let isSet = true;
+
+      if (!qNode.set) {
+        // if the node is not a set but is still an array
+        const nodeId = Array.isArray(nodeIds) ? nodeIds[0] : nodeIds;
+        nodes = [{ id: nodeId }];
+        isSet = false;
+        // Node is not a set
+        // We will make it an array so we can follow the same code path
+      } else { // we need to prune the set nodes down to a managable number
+        nodeIds.forEach((nodeId) => {
+          const node = { id: nodeId };
+          let score = 0;
+          message.knowledge_graph.edges.forEach((edge) => {
+            if (nodeId === edge.source_id || nodeId === edge.target_id) {
+              score += edge.publications.length;
+            }
+          });
+          node.score = score;
+          nodes.push(node);
+        });
+        nodes = _.reverse(_.sortBy(nodes, (n) => n.score));
+        nodes = nodes.splice(0, numAgSetNodes);
+      }
+      nodes.forEach((node) => {
+        let kgNode = getKgNode(node.id);
+        // Get the type from the qNode
+        if (kgNode) {
+          kgNode = _.cloneDeep(kgNode);
+          kgNode.type = qNode.type;
+          kgNode.isSet = isSet;
+          kgNode.binding = keyId;
+          // level is needed for hierarchical view
+          kgNode.level = idToIndMaps.qgNodeMap.get(keyId);
+          newNodes.push(kgNode);
+        }
+      });
+      newNodes.forEach((n) => graph.nodes.push(n));
+    });
+
+    const prunedAgNodeIdSet = new Set(graph.nodes.map(((n) => n.id)));
+
+    const edgeBindingsMap = new Map(Object.entries(answer.edge_bindings));
+
+    // Construct pruned edges
+    edgeBindingsMap.forEach((kedgeIds, qedgeId) => {
+      const newEdges = [];
+      let edgeIds = kedgeIds;
+      if (!Array.isArray(edgeIds)) {
+        edgeIds = [edgeIds];
+      }
+      edgeIds.forEach((eId) => {
+        // get kedge details
+        let kgEdge = getGraphEdge(message.knowledge_graph, eId);
+        // check that kedge is not pruned away
+        if (kgEdge && prunedAgNodeIdSet.has(kgEdge.source_id) && prunedAgNodeIdSet.has(kgEdge.target_id)) {
+          kgEdge = _.cloneDeep(kgEdge);
+          kgEdge.binding = qedgeId;
+          // add to newEdges
+          newEdges.push(kgEdge);
+        }
+      });
+      newEdges.forEach((e) => graph.edges.push(e));
+    });
+
+    return graph;
+  }
+
+  // get only keys that show up in every single answer
+  function initializeFilterKeys() {
+    // makes nested filter keys object
+    // {
+    //  n0: {
+    //    name: {
+    //      Ebola: [true, true]
+    //    }
+    //  },
+    //  n1: {
+    //    name: {
+    //      LINS1: [true, true]
+    //    }
+    //  }
+    // }
+    // the arrays are [checked, available given other columns]
+    const { query_graph: qg } = message;
+    const tempFilterKeys = {};
+    qg.nodes.forEach((qnode) => {
+      const qnodeId = qnode.id;
+      tempFilterKeys[qnodeId] = {};
+      const qnodeFilter = tempFilterKeys[qnodeId];
+      Object.keys(filter[qnodeId]).forEach((knodeId) => {
+        const knode = getKgNode(knodeId);
+        if (knode) {
+          if (Object.keys(qnodeFilter).length === 0) {
+            // we are dealing with the first node
+            Object.keys(knode).forEach((propertyKey) => {
+              propertyKey = propertyKey.replace(/ /g, '_'); // for consistency, change all spaces to underscores
+              if (!keyBlacklist.includes(propertyKey)) {
+                qnodeFilter[propertyKey] = {};
+                qnodeFilter[propertyKey][knode[propertyKey]] = [true, true];
+              }
+            });
+          } else {
+            // we are adding a node to the existing tempFilterKeys
+            Object.keys(knode).forEach((propertyKey) => {
+              propertyKey = propertyKey.replace(/ /g, '_'); // for consistency, change all spaces to underscores
+              if (!keyBlacklist.includes(propertyKey) && qnodeFilter[propertyKey]) {
+                qnodeFilter[propertyKey][knode[propertyKey]] = [true, true];
+              }
+            });
+          }
+          Object.keys(qnodeFilter).forEach((propertyKey) => {
+            if (!Object.keys(knode).includes(propertyKey)) {
+              delete qnodeFilter[propertyKey];
+            }
+          });
+        }
+      });
+    });
+    setFilterKeys(tempFilterKeys);
+    updateSearchedFilter(tempFilterKeys);
+  }
+
+  function initializeFilter() {
+    // makes simple filter object
+    // {
+    //  n0:{
+    //    MONDO:0005737: true
+    //  },
+    //  n1: {
+    //    LINS1: true
+    //  }
+    // }
+    const qNodeIds = getQNodeIds();
+    qNodeIds.forEach((id) => {
+      filter[id] = {};
+    });
+    message.results.forEach((ans) => {
+      const nodeBindings = ans.node_bindings;
+      qNodeIds.forEach((id) => {
+        if (Array.isArray(nodeBindings[id])) {
+          nodeBindings[id].forEach((kNodeId) => {
+            filter[id][kNodeId] = true;
+          });
+        } else {
+          filter[id][nodeBindings[id]] = true;
+        }
+      });
+    });
+    initializeFilterKeys();
+    setFilter(filter);
+  }
+
+  // update filter object given the filterKeys object
+  function updateFilter() {
+    const qNodeIds = getQNodeIds();
+    message.results.forEach((ans) => {
+      const nodeBindings = ans.node_bindings;
+      qNodeIds.forEach((qnodeId) => {
+        let knodeIds = nodeBindings[qnodeId];
+        if (!Array.isArray(knodeIds)) {
+          knodeIds = [knodeIds];
+        }
+        const qnodeFilter = filterKeys[qnodeId];
+        let show;
+        knodeIds.forEach((knodeId) => {
+          const knode = getKgNode(knodeId);
+          if (knode) {
+            show = !Object.keys(qnodeFilter).some((propertyKey) => !qnodeFilter[propertyKey][knode[propertyKey]][0]);
+            filter[qnodeId][knodeId] = show;
+          }
+        });
+      });
+    });
+    setFilter(_.cloneDeep(filter));
+  }
+
+  // given a value and nodeId, either check or uncheck it
+  function updateFilterKeys(qnodeId, propertyKey, propertyValue) {
+    const oldValue = filterKeys[qnodeId][propertyKey][propertyValue][0];
+    filterKeys[qnodeId][propertyKey][propertyValue][0] = !oldValue;
+    setFilterKeys(_.cloneDeep(filterKeys));
+    updateFilter();
+  }
+
+  function searchFilter(qnodeId, value) {
+    // we need to make a complete copy of filterKeys
+    const tempSearchedFilter = _.cloneDeep(filterKeys);
+    Object.keys(filterKeys[qnodeId]).forEach((propertyKey) => {
+      Object.keys(filterKeys[qnodeId][propertyKey]).forEach((propertyValue) => {
+        // if the property value doesn't include the search term, delete it from the searched filter
+        if (!propertyValue.toLowerCase().includes(value.toLowerCase())) {
+          delete tempSearchedFilter[qnodeId][propertyKey][propertyValue];
+        }
+      });
+    });
+    updateSearchedFilter(tempSearchedFilter);
+  }
+
+  // reset the filter and filterKeys objects back to all trues
+  function reset(qnodeId) {
+    Object.keys(filterKeys[qnodeId]).forEach((propertyKey) => {
+      Object.keys(filterKeys[qnodeId][propertyKey]).forEach((propertyValue) => {
+        filterKeys[qnodeId][propertyKey][propertyValue][0] = true;
+      });
+    });
+    updateSearchedFilter(_.cloneDeep(filterKeys));
+    updateFilter();
+  }
+
+  // return boolean of if any properties are checked
+  function isPropFiltered(propertyKey) {
+    let filtered = false;
+    filtered = Object.keys(propertyKey).some((propertyValue) => !propertyKey[propertyValue][0]);
+    return filtered;
+  }
+
+  // check whether any properties are checked and either check or uncheck all
+  function checkAll(qnodeId, propertyKey) {
+    const check = isPropFiltered(filterKeys[qnodeId][propertyKey]);
+    Object.keys(filterKeys[qnodeId][propertyKey]).forEach((propertyValue) => {
+      filterKeys[qnodeId][propertyKey][propertyValue][0] = check;
+    });
+    setFilterKeys(_.cloneDeep(filterKeys));
+    updateFilter();
+  }
+
+  // update react table based on filter object
+  function defaultFilter(row) {
+    let show = true;
+    const qnodeIds = getQNodeIds();
+    qnodeIds.forEach((qnodeId) => {
+      row.original[qnodeId].forEach((knode) => {
+        if (knode.id && !filter[qnodeId][knode.id]) {
+          show = false;
+          return show;
+        }
+      });
+    });
+    return show;
+  }
+
+  // check to see if whole column filter has any false values
+  function isFiltered(qnodeId) {
+    let filtered = false;
+    if (filterKeys[qnodeId]) {
+      // goes through the filterkeys until it finds one that is false
+      filtered = Object.keys(filterKeys[qnodeId]).some((propertyKey) => (
+        Object.keys(filterKeys[qnodeId][propertyKey]).some((propertyValue) => (
+          !filterKeys[qnodeId][propertyKey][propertyValue][0]))
+      ));
+    }
+    return filtered;
+  }
+
+  // update filterKeys object based on filter and table filtered answers
+  function updateFilteredAnswers(newFilteredAnswers) {
+    setFilteredAnswers(newFilteredAnswers);
+    const { query_graph: qg } = message;
+    qg.nodes.forEach((qnode) => {
+      const qnodeId = qnode.id;
+      const qnodeFilter = filterKeys[qnodeId];
+      Object.keys(qnodeFilter).forEach((propertyKey) => {
+        Object.keys(qnodeFilter[propertyKey]).forEach((propertyValue) => {
+          qnodeFilter[propertyKey][propertyValue][1] = false;
+        });
+      });
+    });
+
+    newFilteredAnswers.forEach((answer) => { // loop over rows (remaining answers)
+      getQNodeIds().forEach((qnodeId) => { // loop over columns (qnodes)
+        answer.original[qnodeId].forEach((knode) => { // loop over knodes
+          if (filter[qnodeId][knode.id]) {
+            knode = getKgNode(knode.id);
+            Object.keys(knode).forEach((propertyKey) => { // loop over properties belonging to knode
+              propertyKey = propertyKey.replace(/ /g, '_'); // for consistency, change all spaces to underscores
+              if (propertyKey in filterKeys[qnodeId]) {
+                filterKeys[qnodeId][propertyKey][knode[propertyKey]][1] = true;
+              }
+            });
+          }
+        });
+      });
+    });
+    setFilterKeys(_.cloneDeep(filterKeys));
+  }
+
   return {
     message,
+    concepts: config.concepts,
     annotatedPrunedKnowledgeGraph,
     numKgNodes: numNodes('knowledge_graph'),
     numQgNodes: numNodes('query_graph'),
     answerSetTableData,
     getDenseAnswer,
+    activeAnswerGraph,
     unknownNodes,
+    filter,
+    initializeFilter,
+    updateFilterKeys,
+    searchFilter,
+    reset,
+    defaultFilter,
+    checkAll,
+    isFiltered,
+    updateFilteredAnswers,
+    searchedFilter,
+    filteredAnswers,
   };
 }

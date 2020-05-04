@@ -1,5 +1,8 @@
-import React from 'react';
-import { useTable, usePagination } from 'react-table';
+/* eslint-disable react/jsx-props-no-spreading */
+import React, { useState } from 'react';
+import {
+  useTable, usePagination, useExpanded, useSortBy,
+} from 'react-table';
 import MuiTable from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
@@ -7,7 +10,11 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Button from '@material-ui/core/Button';
 
-export default function Table({ columns, data }) {
+import SubComponent, { answersetSubComponentEnum } from './tableSubComponent/TableSubComponent';
+
+export default function Table(props) {
+  const { columns, data, store } = props;
+  const [activeSubComponentButton, setActiveSubComponentButton] = useState(answersetSubComponentEnum.graph);
   const {
     getTableProps,
     getTableBodyProps,
@@ -21,21 +28,31 @@ export default function Table({ columns, data }) {
     nextPage,
     previousPage,
     setPageSize,
+    visibleColumns,
     state: { pageIndex, pageSize },
   } = useTable(
     { columns, data, initialState: { pageIndex: 0 } },
+    // useBlockLayout,
+    useSortBy,
+    useExpanded,
     usePagination,
   );
+  console.log('headerGroups', headerGroups);
 
   return (
     <>
-      <MuiTable {...getTableProps()}>
+      <MuiTable {...getTableProps()} size="small">
         <TableHead>
           {headerGroups.map((headerGroup) => (
             <TableRow {...headerGroup.getHeaderGroupProps()}>
               {headerGroup.headers.map((column) => (
-                <TableCell {...column.getHeaderProps()}>
-                  {column.render('Header')}
+                <TableCell
+                  {...column.getHeaderProps(column.getSortByToggleProps())}
+                  style={{ width: column.width }}
+                >
+                  <div className={column.isSorted ? column.isSortedDesc ? 'underline' : 'upperline' : '' }>
+                    {column.render('Header')}
+                  </div>
                 </TableCell>
               ))}
             </TableRow>
@@ -45,13 +62,27 @@ export default function Table({ columns, data }) {
           {page.map((row, i) => {
             prepareRow(row);
             return (
-              <TableRow {...row.getRowProps()}>
-                {row.cells.map((cell) => (
-                  <TableCell {...cell.getCellProps()}>
-                    {cell.render('Cell')}
-                  </TableCell>
-                ))}
-              </TableRow>
+              <React.Fragment key={`results-table-row-${i}`}>
+                <TableRow {...row.getRowProps()}>
+                  {row.cells.map((cell) => (
+                    <TableCell {...cell.getCellProps()}>
+                      {cell.render('Cell')}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                {row.isExpanded ? (
+                  <tr>
+                    <td colSpan={visibleColumns.length} className="expandedRow">
+                      <SubComponent
+                        data={row.original}
+                        store={store}
+                        activeButton={activeSubComponentButton}
+                        setActiveButton={setActiveSubComponentButton}
+                      />
+                    </td>
+                  </tr>
+                ) : null}
+              </React.Fragment>
             );
           })}
         </TableBody>

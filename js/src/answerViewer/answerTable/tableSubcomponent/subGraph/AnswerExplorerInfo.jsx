@@ -1,18 +1,17 @@
 import React from 'react';
 
-import { Row, Col, Card } from 'react-bootstrap';
 import { FaDownload } from 'react-icons/fa';
 
 // import AppConfig from '../../AppConfig';
 // import { config } from '../../index';
 
-import AnswerGraph from '../../shared/AnswerGraph';
+import AnswerGraph from '../../../shared/AnswerGraph';
 import PubmedList from './PubmedList';
 
-import curieUrls from '../../../../utils/curieUrls';
-import ctdUrls from '../../../../utils/ctdUrls';
-import getNodeTypeColorMap from '../../../../utils/colorUtils';
-import entityNameDisplay from '../../../../utils/entityNameDisplay';
+import curieUrls from '../../../../../utils/curieUrls';
+import ctdUrls from '../../../../../utils/ctdUrls';
+import getNodeTypeColorMap from '../../../../../utils/colorUtils';
+import entityNameDisplay from '../../../../../utils/entityNameDisplay';
 
 const shortid = require('shortid');
 

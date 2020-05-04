@@ -4,18 +4,19 @@
     right: 0;
     width: 270px;
     box-shadow: -2px 2px 5px 0px #7777777d;
-    z-index: 100;
-
 }
 .popoverDiv {
     margin-top: 10px;
     width: 300px;
     font-size: 13px;
     padding: 10px;
+    background: #fff;
+    border: 1px solid grey;
+    border-radius: 5px;
 }
 .popoverDiv .MuiFormControlLabel-label {
     font-size: 13px;
 }
-.sliderTooltip {
-    font-size: 10px;
+.MuiTooltip-tooltip {
+    font-size: 10px !important;
 }

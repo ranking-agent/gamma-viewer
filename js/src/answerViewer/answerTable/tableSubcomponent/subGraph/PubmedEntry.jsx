@@ -62,7 +62,8 @@ class PubmedEntry extends React.Component {
       }
       return (
         <span key={shortid.generate()}>
-          {a.name}{comma}
+          {a.name}
+          {comma}
         </span>
       );
     });
@@ -77,7 +78,7 @@ class PubmedEntry extends React.Component {
     } = this.getPubmedInfo();
     return (
       <Media>
-        {info.id ?
+        {info.id ? (
           <div>
             <Media.Left>
               <Button disabled={linkDisable} onClick={() => window.open(linkUrl, '_blank')}>
@@ -88,13 +89,15 @@ class PubmedEntry extends React.Component {
             </Media.Left>
             <Media.Body>
               <Media.Heading>{info.title || 'Error'}</Media.Heading>
-              <p style={{ margin: '2px' }}>{info.journal || 'Cannot get document summary'} - {info.pubdate}</p>
+              <p style={{ margin: '2px' }}>
+                {`${info.journal || 'Cannot get document summary'} - ${info.pubdate}`}
+              </p>
               <p style={{ margin: '2px' }}>{authorFrag}</p>
             </Media.Body>
           </div>
-          :
+        ) : (
           'Loading...'
-        }
+        )}
       </Media>
     );
   }

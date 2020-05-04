@@ -5,3 +5,15 @@
 .pagination button {
     width: 320px;
 }
+#answerTableContainer {
+    margin-bottom: 10px;
+    /* this keeps the table from overflowing */
+    overflow: auto;
+    position: relative;
+}
+.upperline {
+    border-top: 2px solid black;
+}
+.underline {
+    border-bottom: 2px solid black;
+}

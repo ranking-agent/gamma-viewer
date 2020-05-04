@@ -1,150 +1,122 @@
-import React from 'react';
-import { observer } from 'mobx-react';
-import { FaFilter, FaCheck, FaPlus, FaMinus } from 'react-icons/fa';
-import { OverlayTrigger, Popover, Button, Card, Accordion } from 'react-bootstrap';
+import React, { useState } from 'react';
+import {
+  FaFilter, FaCheck,
+} from 'react-icons/fa';
+import Popper from '@material-ui/core/Popper';
+import ClickAwayListener from '@material-ui/core/ClickAwayListener';
+import Button from '@material-ui/core/Button';
+import TextField from '@material-ui/core/TextField';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Checkbox from '@material-ui/core/Checkbox';
+import ExpansionPanel from '@material-ui/core/ExpansionPanel';
+import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
+import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 
 import entityNameDisplay from '../../../utils/entityNameDisplay';
 
 const shortid = require('shortid');
 
-@observer
-class AnswersetFilter extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      search: '',
-      openPanels: [],
-    };
+export default function AnswersetFilter(props) {
+  const { qnodeId, store, onChange } = props;
+  const [search, updateSearch] = useState('');
+  const [anchorEl, setAnchorEl] = useState(null);
 
-    this.filterHash = '';
-    this.check = this.check.bind(this);
-    this.checkAll = this.checkAll.bind(this);
-    this.reset = this.reset.bind(this);
-    this.handleSearch = this.handleSearch.bind(this);
-    this.togglePanel = this.togglePanel.bind(this);
-  }
-
-  handleSearch(event) {
-    const { value } = event.target;
-    const { qnodeId, store } = this.props;
+  function handleSearch(value) {
     store.searchFilter(qnodeId, value);
-    this.setState({ search: value });
+    updateSearch(value);
   }
 
-  check(propertyKey, propertyValue) {
-    const { qnodeId, store } = this.props;
+  function check(propertyKey, propertyValue) {
     store.updateFilterKeys(qnodeId, propertyKey, propertyValue);
-    this.props.onChange({});
+    onChange({});
   }
 
-  checkAll(propertyKey) {
-    const { qnodeId, store } = this.props;
+  function checkAll(propertyKey) {
     store.checkAll(qnodeId, propertyKey);
-    this.props.onChange({});
+    onChange({});
   }
 
-  reset() {
-    const { qnodeId, store } = this.props;
+  function reset() {
     store.reset(qnodeId);
-    this.props.onChange({});
-    this.setState({ search: '' });
+    onChange({});
+    updateSearch('');
   }
 
-  togglePanel(index) {
-    this.setState((state) => {
-      const { openPanels } = state;
-      openPanels[index] = !state.openPanels[index];
-      return { openPanels };
-    });
-  }
-
-  render() {
-    const { qnodeId, store } = this.props;
-    const { searchedFilter, filterKeys } = store;
-    const isFiltered = store.isFiltered(qnodeId);
-    const { search, openPanels } = this.state;
-    const filterPopover = (
-      <Popover id={shortid.generate()} className="answersetFilter" >
-        <input
-          value={search}
-          onChange={this.handleSearch}
-          placeholder="Search"
-          style={{ width: '100%', padding: '5px' }}
-        />
-        <Button style={{ display: 'block', margin: '10px auto' }} onClick={this.reset}>Reset</Button>
-        {Object.keys(searchedFilter[qnodeId] || {}).map((propertyKey, index) => {
-          // if there aren't any values under the header, don't show anything
-          if (Object.keys(searchedFilter[qnodeId][propertyKey]).length) {
-            return (
-              <div key={shortid.generate()}>
-                <Accordion activeKey="0">
-                  <Card>
-                    <Card.Header>
-                      <Card.Title>
-                        <button onClick={() => this.togglePanel(index)}>{this.state.openPanels[index] ? <FaMinus /> : <FaPlus />}</button>
-                        <span style={{ marginLeft: 10, fontWeight: 'bold' }}>{entityNameDisplay(propertyKey)}</span>
-                        <label htmlFor={`${propertyKey}-select`} className="pull-right">
-                          <input
-                            type="checkbox"
-                            id={`${propertyKey}-select`}
-                            defaultChecked={!store.isPropFiltered(filterKeys[qnodeId][propertyKey])}
-                            onChange={() => this.checkAll(propertyKey)}
+  return (
+    <div>
+      <ClickAwayListener onClickAway={() => setAnchorEl(null)}>
+        <Button
+          style={{
+            display: 'flex', justifyContent: 'center', width: '100%', cursor: 'pointer',
+          }}
+        >
+          <FaFilter />
+          {store.isFiltered(qnodeId) && <FaCheck />}
+        </Button>
+        <Popper id={shortid.generate()} className="answersetFilter" open={Boolean(anchorEl)} anchorEl={anchorEl}>
+          <TextField
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Search"
+            style={{ width: '100%', padding: '5px' }}
+          />
+          <Button style={{ display: 'block', margin: '10px auto' }} onClick={reset}>Reset</Button>
+          {Object.keys(store.searchedFilter[qnodeId] || {}).map((propertyKey) => {
+            // if there aren't any values under the header, don't show anything
+            if (Object.keys(store.searchedFilter[qnodeId][propertyKey]).length) {
+              return (
+                <div key={shortid.generate()}>
+                  <ExpansionPanel>
+                    <ExpansionPanelSummary
+                      expandIcon={<ExpandMoreIcon />}
+                    >
+                      <FormControlLabel
+                        className="pull-right"
+                        control={(
+                          <Checkbox
+                            defaultChecked={!store.isPropFiltered(store.filterKeys[qnodeId][propertyKey])}
+                            onChange={() => checkAll(propertyKey)}
                             style={{ marginRight: '10px' }}
+                            color="primary"
                           />
-                          Toggle All
-                        </label>
-                      </Card.Title>
-                    </Card.Header>
-                    <Accordion.Collapse eventKey="0">
-                      <Card.Body>
-                        {Object.keys(searchedFilter[qnodeId][propertyKey]).map((propertyValue, i) => {
-                          const style = { fontWeight: 'normal', whiteSpace: 'nowrap', overflow: 'auto' };
-                          if (!filterKeys[qnodeId][propertyKey][propertyValue][1]) {
-                            style.color = 'lightgrey';
-                          }
-                          return (
-                            <div key={shortid.generate()} style={{ paddingLeft: '20px', display: 'flex' }}>
-                              <label
-                                htmlFor={`${propertyKey}-${i}`}
-                                style={style}
-                              >
-                                <input
-                                  type="checkbox"
-                                  id={`${propertyKey}-${i}`}
-                                  defaultChecked={filterKeys[qnodeId][propertyKey][propertyValue][0]}
-                                  onChange={() => this.check(propertyKey, propertyValue)}
+                        )}
+                        label="Toggle All"
+                      />
+                      <span style={{ marginLeft: 10, fontWeight: 'bold' }}>{entityNameDisplay(propertyKey)}</span>
+                    </ExpansionPanelSummary>
+                    <ExpansionPanelDetails>
+                      {Object.keys(store.searchedFilter[qnodeId][propertyKey]).map((propertyValue) => {
+                        const style = { fontWeight: 'normal', whiteSpace: 'nowrap', overflow: 'auto' };
+                        if (!store.filterKeys[qnodeId][propertyKey][propertyValue][1]) {
+                          style.color = 'lightgrey';
+                        }
+                        return (
+                          <div key={shortid.generate()} style={{ paddingLeft: '20px', display: 'flex' }}>
+                            <FormControlLabel
+                              style={style}
+                              control={(
+                                <Checkbox
+                                  defaultChecked={store.filterKeys[qnodeId][propertyKey][propertyValue][0]}
+                                  onChange={() => check(propertyKey, propertyValue)}
                                   style={{ marginRight: '10px' }}
+                                  color="primary"
                                 />
-                                {propertyValue}
-                              </label>
-                            </div>
-                          );
-                        })}
-                      </Card.Body>
-                    </Accordion.Collapse>
-                  </Card>
-                </Accordion>
-              </div>
-            );
-          }
-          return null;
-        })}
-      </Popover>
-    );
-    return (
-      <div>
-        <OverlayTrigger trigger={['click']} placement="bottom" rootClose overlay={filterPopover}>
-          <Button
-            style={{
-              display: 'flex', justifyContent: 'center', width: '100%', cursor: 'pointer',
-            }}
-          >
-            <FaFilter /> {isFiltered && <FaCheck />}
-          </Button>
-        </OverlayTrigger>
-      </div>
-    );
-  }
+                              )}
+                              label={propertyValue}
+                            />
+                          </div>
+                        );
+                      })}
+                    </ExpansionPanelDetails>
+                  </ExpansionPanel>
+                </div>
+              );
+            }
+            return null;
+          })}
+        </Popper>
+      </ClickAwayListener>
+    </div>
+  );
 }
-
-export default AnswersetFilter;
