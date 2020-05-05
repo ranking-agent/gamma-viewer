@@ -77,14 +77,18 @@ export default function AnswerTable(props) {
         colSpecObj.width = getColumnWidth(data, colSpecObj.accessor, colSpecObj.Header);
       }
       // this initializes the filter object for all nodes
+      // colSpecObj.filterable = true;
+      // colSpecObj.qnodeId = nodeId;
       store.initializeFilter();
-      colSpecObj.Filter = (answersetFilterProps) => (
+      colSpecObj.Filter = ({ column: { setFilter }, store: filterStore }) => (
         <AnswersetFilter
-          {...answersetFilterProps}
+          setFilter={setFilter}
+          store={filterStore}
           qnodeId={nodeId}
-          store={store}
         />
       );
+      colSpecObj.filter = store.defaultFilter;
+
       const backgroundColor = bgColorMap(colSpecObj.type);
       const columnHeader = colSpecObj.Header;
       colSpecObj.Header = () => (
@@ -102,14 +106,18 @@ export default function AnswerTable(props) {
         </IconButton>
       ),
       width: 50,
+      // filterable: false,
+      disableFilters: true,
     });
     // Add Score column at the end
     colHeaders.push({
       Header: 'Rank',
       id: 'score',
       // width: 75,
-      filterable: false,
+      // filterable: false,
+      disableFilters: true,
       accessor: 'score',
+      sortType: 'basic',
       Cell: (d) => {
         if (!d.value) {
           return <span className="number">N/A</span>;
@@ -132,8 +140,7 @@ export default function AnswerTable(props) {
       if (store.unknownNodes) {
         window.alert('We were able to retrieve the answers to this question. However, it seems there was an error retrieving some of the nodes. If you would like complete answers, please try asking this question again.');
       }
-      const answerTables = store.answerSetTableData();
-      const { columnHeaders, answers } = answerTables;
+      const { columnHeaders, answers } = store.answerSetTableData();
       initializeState(columnHeaders, answers);
     }
   }, [tab]);

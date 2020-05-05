@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
+import shortid from 'shortid';
+import _ from 'lodash';
 import {
   FaFilter, FaCheck,
 } from 'react-icons/fa';
 import Popper from '@material-ui/core/Popper';
 import ClickAwayListener from '@material-ui/core/ClickAwayListener';
 import Button from '@material-ui/core/Button';
-import TextField from '@material-ui/core/TextField';
+// import TextField from '@material-ui/core/TextField';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import ExpansionPanel from '@material-ui/core/ExpansionPanel';
@@ -15,59 +17,67 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 
 import entityNameDisplay from '../../../utils/entityNameDisplay';
 
-const shortid = require('shortid');
-
 export default function AnswersetFilter(props) {
-  const { qnodeId, store, onChange } = props;
-  const [search, updateSearch] = useState('');
+  // Store comes from props in Table component
+  const { qnodeId, store, setFilter } = props;
+  // const [search, updateSearch] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
+  const [expanded, setExpanded] = useState({});
 
-  function handleSearch(value) {
-    store.searchFilter(qnodeId, value);
-    updateSearch(value);
-  }
+  // function handleSearch(value) {
+  //   store.searchFilter(qnodeId, value);
+  //   updateSearch(value);
+  // }
 
   function check(propertyKey, propertyValue) {
     store.updateFilterKeys(qnodeId, propertyKey, propertyValue);
-    onChange({});
+    setFilter({});
   }
 
   function checkAll(propertyKey) {
     store.checkAll(qnodeId, propertyKey);
-    onChange({});
+    setFilter({});
   }
 
   function reset() {
     store.reset(qnodeId);
-    onChange({});
-    updateSearch('');
+    setFilter({});
+    // updateSearch('');
   }
 
+  const handleExpand = (panel) => (event, isExpanded) => {
+    expanded[panel] = isExpanded;
+    setExpanded(_.cloneDeep(expanded));
+  };
+
   return (
-    <div>
-      <ClickAwayListener onClickAway={() => setAnchorEl(null)}>
+    <ClickAwayListener onClickAway={() => setAnchorEl(null)}>
+      <div className="filterHeaderPopper">
         <Button
           style={{
             display: 'flex', justifyContent: 'center', width: '100%', cursor: 'pointer',
           }}
+          onClick={(e) => setAnchorEl(anchorEl ? null : e.target)}
+          variant="contained"
         >
           <FaFilter />
           {store.isFiltered(qnodeId) && <FaCheck />}
         </Button>
-        <Popper id={shortid.generate()} className="answersetFilter" open={Boolean(anchorEl)} anchorEl={anchorEl}>
-          <TextField
+        <Popper id={shortid.generate()} className="answersetFilter MuiPaper-elevation10" open={Boolean(anchorEl)} anchorEl={anchorEl}>
+          {/* <TextField
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search"
             style={{ width: '100%', padding: '5px' }}
-          />
+            variant="outlined"
+          /> */}
           <Button style={{ display: 'block', margin: '10px auto' }} onClick={reset}>Reset</Button>
           {Object.keys(store.searchedFilter[qnodeId] || {}).map((propertyKey) => {
             // if there aren't any values under the header, don't show anything
             if (Object.keys(store.searchedFilter[qnodeId][propertyKey]).length) {
               return (
                 <div key={shortid.generate()}>
-                  <ExpansionPanel>
+                  <ExpansionPanel expanded={expanded[propertyKey]} onChange={handleExpand(propertyKey)}>
                     <ExpansionPanelSummary
                       expandIcon={<ExpandMoreIcon />}
                     >
@@ -85,7 +95,7 @@ export default function AnswersetFilter(props) {
                       />
                       <span style={{ marginLeft: 10, fontWeight: 'bold' }}>{entityNameDisplay(propertyKey)}</span>
                     </ExpansionPanelSummary>
-                    <ExpansionPanelDetails>
+                    <ExpansionPanelDetails style={{ flexDirection: 'column' }}>
                       {Object.keys(store.searchedFilter[qnodeId][propertyKey]).map((propertyValue) => {
                         const style = { fontWeight: 'normal', whiteSpace: 'nowrap', overflow: 'auto' };
                         if (!store.filterKeys[qnodeId][propertyKey][propertyValue][1]) {
@@ -116,7 +126,7 @@ export default function AnswersetFilter(props) {
             return null;
           })}
         </Popper>
-      </ClickAwayListener>
-    </div>
+      </div>
+    </ClickAwayListener>
   );
 }

@@ -17,3 +17,25 @@
 .underline {
     border-bottom: 2px solid black;
 }
+.answersetFilter {
+    min-width: 30%;
+    max-width: 50%;
+    max-height: 30%;
+    overflow: scroll;
+    padding: 10px;
+    background-color: white;
+    z-index: 10;
+    border-radius: 7px;
+}
+.answersetFilter hr {
+    margin: 0;
+}
+#emptyTableOverlay {
+    position: absolute;
+    top: 40%;
+    left: 45%;
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid grey;
+    border-radius: 5px;
+}

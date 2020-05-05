@@ -42,9 +42,7 @@ export default function TableSubComponent(props) {
     // if (activeButtonKey) {
     //   setActiveButton(activeButtonKey);
     // }
-    console.log(data.id);
     const tempRowData = store.getDenseAnswer(data.id);
-    console.log(tempRowData.id);
     const ansId = tempRowData.id;
     // store.updateActiveAnswerId(ansId);
     let g = store.activeAnswerGraph(ansId);

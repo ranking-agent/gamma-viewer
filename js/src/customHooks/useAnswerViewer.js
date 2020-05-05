@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import _ from 'lodash';
 
 import entityNameDisplay from '../../utils/entityNameDisplay';
-import useFilter from './useFilter';
 import config from '../../config.json';
 
 const makeEmptyArray = (len, init) => {
@@ -12,13 +11,14 @@ const makeEmptyArray = (len, init) => {
   return array;
 };
 
+const filter = {};
+
 export default function useAnswerViewer(msg) {
   const [message, updateMessage] = useState(msg);
   // const [activeAnswerId, updateActiveAnswerId] = useState(null);
   // const [denseAnswer, updateDenseAnswer] = useState({});
   const [numAgSetNodes, updateNumAgSetNodes] = useState(10);
   const [idToIndMaps, setIdToIndMaps] = useState(null);
-  const [filter, setFilter] = useState({});
   const [filterKeys, setFilterKeys] = useState({});
   const [searchedFilter, updateSearchedFilter] = useState({});
   const [filteredAnswers, setFilteredAnswers] = useState({});
@@ -476,21 +476,11 @@ export default function useAnswerViewer(msg) {
     return graph;
   }
 
-  // get only keys that show up in every single answer
+  /**
+   * get only keys that show up in every single answer
+   * @returns {{n0:{name:{Ebola:[true,true]}},n1:{name:{LINS1:[true,true]}}}}
+   */
   function initializeFilterKeys() {
-    // makes nested filter keys object
-    // {
-    //  n0: {
-    //    name: {
-    //      Ebola: [true, true]
-    //    }
-    //  },
-    //  n1: {
-    //    name: {
-    //      LINS1: [true, true]
-    //    }
-    //  }
-    // }
     // the arrays are [checked, available given other columns]
     const { query_graph: qg } = message;
     const tempFilterKeys = {};
@@ -531,16 +521,11 @@ export default function useAnswerViewer(msg) {
     updateSearchedFilter(tempFilterKeys);
   }
 
+  /**
+   * Makes simple filter object
+   * {{n0:{"MONDO:0005737":true},n1:{"LINS1":true}}}
+   */
   function initializeFilter() {
-    // makes simple filter object
-    // {
-    //  n0:{
-    //    MONDO:0005737: true
-    //  },
-    //  n1: {
-    //    LINS1: true
-    //  }
-    // }
     const qNodeIds = getQNodeIds();
     qNodeIds.forEach((id) => {
       filter[id] = {};
@@ -558,11 +543,12 @@ export default function useAnswerViewer(msg) {
       });
     });
     initializeFilterKeys();
-    setFilter(filter);
   }
 
-  // update filter object given the filterKeys object
-  function updateFilter() {
+  /**
+   * Update filter object given the filterKeys object
+   */
+  function updateFilter(newFilterKeys) {
     const qNodeIds = getQNodeIds();
     message.results.forEach((ans) => {
       const nodeBindings = ans.node_bindings;
@@ -571,7 +557,7 @@ export default function useAnswerViewer(msg) {
         if (!Array.isArray(knodeIds)) {
           knodeIds = [knodeIds];
         }
-        const qnodeFilter = filterKeys[qnodeId];
+        const qnodeFilter = newFilterKeys[qnodeId];
         let show;
         knodeIds.forEach((knodeId) => {
           const knode = getKgNode(knodeId);
@@ -582,15 +568,17 @@ export default function useAnswerViewer(msg) {
         });
       });
     });
-    setFilter(_.cloneDeep(filter));
   }
 
-  // given a value and nodeId, either check or uncheck it
+  /**
+   * Given a value and nodeId, either check or uncheck it
+   */
   function updateFilterKeys(qnodeId, propertyKey, propertyValue) {
     const oldValue = filterKeys[qnodeId][propertyKey][propertyValue][0];
     filterKeys[qnodeId][propertyKey][propertyValue][0] = !oldValue;
-    setFilterKeys(_.cloneDeep(filterKeys));
-    updateFilter();
+    const newFilterKeys = _.cloneDeep(filterKeys);
+    setFilterKeys(newFilterKeys);
+    updateFilter(newFilterKeys);
   }
 
   function searchFilter(qnodeId, value) {
@@ -607,50 +595,74 @@ export default function useAnswerViewer(msg) {
     updateSearchedFilter(tempSearchedFilter);
   }
 
-  // reset the filter and filterKeys objects back to all trues
+  /**
+   * Reset the filter and filterKeys objects back to all trues
+   */
   function reset(qnodeId) {
     Object.keys(filterKeys[qnodeId]).forEach((propertyKey) => {
       Object.keys(filterKeys[qnodeId][propertyKey]).forEach((propertyValue) => {
         filterKeys[qnodeId][propertyKey][propertyValue][0] = true;
       });
     });
-    updateSearchedFilter(_.cloneDeep(filterKeys));
-    updateFilter();
+    const newFilterKeys = _.cloneDeep(filterKeys);
+    updateSearchedFilter(newFilterKeys);
+    setFilterKeys(newFilterKeys);
+    updateFilter(newFilterKeys);
   }
 
-  // return boolean of if any properties are checked
+  /**
+   * Return boolean of if any properties are checked
+   * @returns Boolean
+   */
   function isPropFiltered(propertyKey) {
     let filtered = false;
     filtered = Object.keys(propertyKey).some((propertyValue) => !propertyKey[propertyValue][0]);
     return filtered;
   }
 
-  // check whether any properties are checked and either check or uncheck all
+  /**
+   * Check whether any properties are checked and either check or uncheck all
+   */
   function checkAll(qnodeId, propertyKey) {
     const check = isPropFiltered(filterKeys[qnodeId][propertyKey]);
     Object.keys(filterKeys[qnodeId][propertyKey]).forEach((propertyValue) => {
       filterKeys[qnodeId][propertyKey][propertyValue][0] = check;
     });
-    setFilterKeys(_.cloneDeep(filterKeys));
-    updateFilter();
+    const newFilterKeys = _.cloneDeep(filterKeys);
+    setFilterKeys(newFilterKeys);
+    updateFilter(newFilterKeys);
   }
 
-  // update react table based on filter object
-  function defaultFilter(row) {
-    let show = true;
-    const qnodeIds = getQNodeIds();
-    qnodeIds.forEach((qnodeId) => {
-      row.original[qnodeId].forEach((knode) => {
-        if (knode.id && !filter[qnodeId][knode.id]) {
-          show = false;
-          return show;
-        }
-      });
+  /**
+   * Update react table based on filter object
+   * @returns Filtered rows
+   */
+  function defaultFilter(rows, id) {
+    console.log('filter', filter);
+    return rows.filter((row) => {
+      const found = row.original[id].find((knode) => knode.id && !filter[id][knode.id]);
+      if (found) {
+        return false;
+      }
+      return true;
     });
-    return show;
+    // let show = true;
+    // const qnodeIds = getQNodeIds();
+    // qnodeIds.forEach((qnodeId) => {
+    //   row.original[qnodeId].forEach((knode) => {
+    //     if (knode.id && !filter[qnodeId][knode.id]) {
+    //       show = false;
+    //       return show;
+    //     }
+    //   });
+    // });
+    // return show;
   }
 
-  // check to see if whole column filter has any false values
+  /**
+   * Check to see if whole column filter has any false values
+   * @returns Boolean
+   */
   function isFiltered(qnodeId) {
     let filtered = false;
     if (filterKeys[qnodeId]) {
@@ -663,7 +675,9 @@ export default function useAnswerViewer(msg) {
     return filtered;
   }
 
-  // update filterKeys object based on filter and table filtered answers
+  /**
+   * Update filterKeys object based on filter and table filtered answers
+   */
   function updateFilteredAnswers(newFilteredAnswers) {
     setFilteredAnswers(newFilteredAnswers);
     const { query_graph: qg } = message;
@@ -692,7 +706,8 @@ export default function useAnswerViewer(msg) {
         });
       });
     });
-    setFilterKeys(_.cloneDeep(filterKeys));
+    const newFilterKeys = _.cloneDeep(filterKeys);
+    setFilterKeys(newFilterKeys);
   }
 
   return {
@@ -705,7 +720,7 @@ export default function useAnswerViewer(msg) {
     getDenseAnswer,
     activeAnswerGraph,
     unknownNodes,
-    filter,
+    filterKeys,
     initializeFilter,
     updateFilterKeys,
     searchFilter,
@@ -716,5 +731,6 @@ export default function useAnswerViewer(msg) {
     updateFilteredAnswers,
     searchedFilter,
     filteredAnswers,
+    isPropFiltered,
   };
 }

@@ -1,6 +1,6 @@
 .DS_Store
 node_modules
 .vscode
-pack/static
+GammaViewer/static
 *.egg-info
 __pycache__

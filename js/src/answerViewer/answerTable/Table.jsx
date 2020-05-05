@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { useState } from 'react';
 import {
-  useTable, usePagination, useExpanded, useSortBy,
+  useTable, usePagination, useExpanded, useSortBy, useFilters,
 } from 'react-table';
 import MuiTable from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -11,9 +11,13 @@ import TableRow from '@material-ui/core/TableRow';
 import Button from '@material-ui/core/Button';
 
 import SubComponent, { answersetSubComponentEnum } from './tableSubComponent/TableSubComponent';
+import EmptyTable from './EmptyTable';
+// import AnswersetFilter from './AnswersetFilter';
 
 export default function Table(props) {
-  const { columns, data, store } = props;
+  const {
+    columns, data, store,
+  } = props;
   const [activeSubComponentButton, setActiveSubComponentButton] = useState(answersetSubComponentEnum.graph);
   const {
     getTableProps,
@@ -29,37 +33,62 @@ export default function Table(props) {
     previousPage,
     setPageSize,
     visibleColumns,
-    state: { pageIndex, pageSize },
+    state,
   } = useTable(
-    { columns, data, initialState: { pageIndex: 0 } },
-    // useBlockLayout,
+    {
+      columns,
+      data,
+      initialState: {
+        pageIndex: 0,
+        sortBy: [
+          {
+            id: 'score',
+            desc: true,
+          },
+        ],
+      },
+    },
+    useFilters,
     useSortBy,
     useExpanded,
     usePagination,
   );
-  console.log('headerGroups', headerGroups);
 
   return (
     <>
       <MuiTable {...getTableProps()} size="small">
         <TableHead>
-          {headerGroups.map((headerGroup) => (
-            <TableRow {...headerGroup.getHeaderGroupProps()}>
-              {headerGroup.headers.map((column) => (
-                <TableCell
-                  {...column.getHeaderProps(column.getSortByToggleProps())}
-                  style={{ width: column.width }}
-                >
-                  <div className={column.isSorted ? column.isSortedDesc ? 'underline' : 'upperline' : '' }>
-                    {column.render('Header')}
-                  </div>
-                </TableCell>
-              ))}
-            </TableRow>
+          {headerGroups.map((headerGroup, i) => (
+            <React.Fragment key={`header-group-${i}`}>
+              <TableRow {...headerGroup.getHeaderGroupProps()}>
+                {headerGroup.headers.map((column) => (
+                  <TableCell
+                    {...column.getHeaderProps(column.getSortByToggleProps())}
+                    style={{ width: column.width }}
+                  >
+                    <div className={column.isSorted ? column.isSortedDesc ? 'underline' : 'upperline' : '' }>
+                      {column.render('Header')}
+                    </div>
+                  </TableCell>
+                ))}
+              </TableRow>
+              {/* Filter row */}
+              <TableRow>
+                {headerGroup.headers.map((column, ind) => (
+                  <TableCell key={`filter-header-${ind}`}>
+                    {column.canFilter ? (
+                      column.render('Filter', { store })
+                    ) : (
+                      null
+                    )}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </React.Fragment>
           ))}
         </TableHead>
         <TableBody {...getTableBodyProps()}>
-          {page.map((row, i) => {
+          {page.length ? page.map((row, i) => {
             prepareRow(row);
             return (
               <React.Fragment key={`results-table-row-${i}`}>
@@ -84,9 +113,17 @@ export default function Table(props) {
                 ) : null}
               </React.Fragment>
             );
-          })}
+          }) : (
+            <EmptyTable
+              numRows={10}
+              numCells={visibleColumns.length}
+            />
+          )}
         </TableBody>
       </MuiTable>
+      {!page.length > 0 && (
+        <div id="emptyTableOverlay">No Results</div>
+      )}
       <div className="pagination">
         <Button
           onClick={() => previousPage()}
@@ -99,7 +136,7 @@ export default function Table(props) {
           Page
           <input
             type="number"
-            value={pageIndex + 1}
+            value={state.pageIndex + 1}
             min={1}
             max={pageCount}
             onChange={(e) => {
@@ -111,7 +148,7 @@ export default function Table(props) {
           {`of ${pageCount}`}
         </div>
         <select
-          value={pageSize}
+          value={state.pageSize}
           onChange={(e) => {
             setPageSize(Number(e.target.value));
           }}
