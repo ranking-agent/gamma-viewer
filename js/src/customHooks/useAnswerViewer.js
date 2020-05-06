@@ -476,6 +476,20 @@ export default function useAnswerViewer(msg) {
     return graph;
   }
 
+  function getMaxNumAgNodes(activeAnswerId) {
+    const ansIdMap = ansIdToIndMap();
+    const answer = message.results[ansIdMap.get(activeAnswerId)];
+    const nodeBindingsMap = new Map(Object.entries(answer.node_bindings));
+    let maxNumAgNodes = 0;
+    nodeBindingsMap.forEach((val) => {
+      const nodeIds = val;
+      if (Array.isArray(nodeIds)) {
+        maxNumAgNodes = Math.max(maxNumAgNodes, nodeIds.length);
+      }
+    });
+    return maxNumAgNodes;
+  }
+
   /**
    * get only keys that show up in every single answer
    * @returns {{n0:{name:{Ebola:[true,true]}},n1:{name:{LINS1:[true,true]}}}}
@@ -720,6 +734,9 @@ export default function useAnswerViewer(msg) {
     getDenseAnswer,
     activeAnswerGraph,
     unknownNodes,
+    updateNumAgSetNodes,
+    numAgSetNodes,
+    getMaxNumAgNodes,
     filterKeys,
     initializeFilter,
     updateFilterKeys,

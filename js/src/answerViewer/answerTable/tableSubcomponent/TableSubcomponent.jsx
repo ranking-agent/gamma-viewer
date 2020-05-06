@@ -122,6 +122,7 @@ export default function TableSubComponent(props) {
             loadedGraph={loadedGraph}
             store={store}
             graph={graph}
+            activeAnswerId={rowData.id}
           />
         )}
         {isMetadataActive && rowData.nodes && (

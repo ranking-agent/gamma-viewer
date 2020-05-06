@@ -1,116 +1,102 @@
-import React from 'react';
-// import { Row, Col } from 'react-bootstrap';
+import React, { useState, useEffect, useRef } from 'react';
 import { AutoSizer, List } from 'react-virtualized';
+import axios from 'axios';
+
 import PubmedEntry from './PubmedEntry';
 
-// import AppConfig from '../../AppConfig';
-import config from '../../../../config.json';
+const { CancelToken } = axios;
+const axiosCancel = CancelToken.source();
 
-class PubmedList extends React.Component {
-  constructor(props) {
-    super(props);
+const styles = {
+  list: {
+    border: 'none',
+    marginTop: '0px',
+    outline: 'none',
+  },
+  row: {
+    display: 'flex',
+    flexDirection: 'row',
+    padding: '5px',
+    backgroundColor: '#fff',
+    borderBottom: '1px solid #e0e0e0',
+  },
+};
 
-    // this.appConfig = new AppConfig(config);
+export default function PubmedList(props) {
+  const { publications } = props;
+  const [pubs, setPubs] = useState({});
+  const list = useRef(null);
 
-    this.styles = {
-      list: {
-        border: 'none',
-        marginTop: '0px',
-        outline: 'none',
-      },
-      row: {
-        display: 'flex',
-        flexDirection: 'row',
-        padding: '5px',
-        backgroundColor: '#fff',
-        borderBottom: '1px solid #e0e0e0',
-      },
-    };
+  /**
+   * Cancel all axios calls on unmount
+   */
+  useEffect(() => axiosCancel.cancel('Pubmed request canceled'), []);
 
-    this.state = {
-      pubs: {},
-    };
-
-    this.noRowsRenderer = this.noRowsRenderer.bind(this);
-    this.rowRenderer = this.rowRenderer.bind(this);
-  }
-
-  componentWillUnmount() {
-    // this.appConfig.cancelToken.cancel('Pubmed request canceled');
-  }
-
-  rowRenderer({
+  function rowRenderer({
     index,
     key,
     style,
     isScrolling,
   }) {
-    let pmid = this.props.publications[index].toString();
+    let pmid = publications[index].toString();
     if ((typeof pmid === 'string' || pmid instanceof String) && (pmid.indexOf(':') !== -1)) {
       // pmidStr has a colon, and therefore probably a curie, remove it.
       pmid = pmid.substr(pmid.indexOf(':') + 1);
     }
     let publication = 'Loading...';
-    if (this.state.pubs[index]) {
-      publication = <PubmedEntry pub={this.state.pubs[index]} />;
+    if (pubs[index]) {
+      publication = <PubmedEntry pub={pubs[index]} />;
     } else if (!isScrolling) {
-      // this.appConfig.getPubmedPublications(
-      //   pmid,
-      //   (pub) => {
-      //     const { pubs } = this.state;
-      //     pubs[index] = pub;
-      //     this.list.forceUpdateGrid();
-      //     this.setState({ pubs });
-      //   },
-      //   (err) => {
-      //     if (err.message !== 'Pubmed request canceled') {
-      //       console.log('error', err);
-      //     }
-      //   },
-      // );
+      axios.request({
+        method: 'GET',
+        url: `https://robokop.renci.org/api/pubmed/${pmid}`,
+        cancelToken: axiosCancel.token,
+      })
+        .then((res) => {
+          console.log('res', res);
+          pubs[index] = res;
+          list.forceUpdateGrid();
+          setPubs(pubs);
+        })
+        .catch((err) => {
+          if (err.message !== 'Pubmed request canceled') {
+            console.log('error', err);
+          }
+        });
     }
     return (
       <div
-        style={{ ...style, ...this.styles.row }}
+        style={{ ...style, ...styles.row }}
         key={key}
       >
         {publication}
       </div>
     );
   }
-  noRowsRenderer() {
+
+  function noRowsRenderer() {
     return (
-      <Row>
-        <Col md={12}>
-          <h5 style={{ padding: '15px' }}>
-            {'No Publications Found'}
-          </h5>
-        </Col>
-      </Row>
+      <h5 style={{ padding: '15px' }}>
+        No Publications Found
+      </h5>
     );
   }
 
-  render() {
-    const rowCount = this.props.publications.length;
-    const listHeight = Math.max(Math.min((rowCount * 100), 500), 100);
-    return (
-      <AutoSizer disableHeight defaultWidth={100}>
-        {({ width }) => (
-          <List
-            ref={(ref) => { this.list = ref; }}
-            style={this.styles.list}
-            height={listHeight}
-            overscanRowCount={1}
-            rowCount={rowCount}
-            rowHeight={100}
-            noRowsRenderer={this.noRowsRenderer}
-            rowRenderer={this.rowRenderer}
-            width={width}
-          />
-        )}
-      </AutoSizer>
-    );
-  }
+  return (
+    <AutoSizer disableHeight defaultWidth={100}>
+      {({ width }) => (
+        <List
+          ref={list}
+          style={styles.list}
+          height={Math.max(Math.min((publications.length * 100), 500), 100)}
+          overscanRowCount={1}
+          rowCount={publications.length}
+          rowHeight={100}
+          noRowsRenderer={noRowsRenderer}
+          rowRenderer={rowRenderer}
+          width={width}
+        />
+      )}
+    </AutoSizer>
+  );
 }
-
-export default PubmedList;

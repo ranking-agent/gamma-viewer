@@ -1,9 +1,8 @@
-import React from 'react';
-
+import React, { useState, useEffect } from 'react';
+import Card from '@material-ui/core/Card';
+import CardContent from '@material-ui/core/CardContent';
 import { FaDownload } from 'react-icons/fa';
-
-// import AppConfig from '../../AppConfig';
-// import { config } from '../../index';
+import axios from 'axios';
 
 import AnswerGraph from '../../../shared/AnswerGraph';
 import PubmedList from './PubmedList';
@@ -18,216 +17,133 @@ const shortid = require('shortid');
 const nodeBlacklist = ['isSet', 'labels', 'label', 'equivalent_identifiers', 'type', 'id', 'degree', 'name', 'title', 'color', 'binding'];
 const edgeBlacklist = ['binding', 'ctime', 'id', 'publications', 'source_database', 'source_id', 'target_id', 'type'];
 
-class AnswerExplorerInfo extends React.Component {
-  constructor(props) {
-    super(props);
+export default function AnswerExplorerInfo(props) {
+  const { graph, selectedEdge: parentSelectedEdge, store } = props;
+  const [selectedEdge, setSelectedEdge] = useState(parentSelectedEdge);
+  const [selectedEdgeId, setSelectedEdgeId] = useState(null);
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [subgraph, setSubgraph] = useState({ nodes: [], edges: [] });
+  const [disableGraphClick, setDisableGraphClick] = useState(false);
+  const [downloadingPubs, setDownloadingPubs] = useState(false);
 
-    // this.appConfig = new AppConfig(config);
+  function syncPropsAndState() {
+    const nodes = graph.nodes.filter((n) => ((n.id === selectedEdge.source_id) || (n.id === selectedEdge.target_id)));
+    const nodeIds = nodes.map((n) => n.id);
+    const edges = graph.edges.filter((e) => (nodeIds.includes(e.source_id) && nodeIds.includes(e.target_id)));
 
-    this.state = {
-      selectedEdgeId: null,
-      selectedNodeId: null,
-      subgraph: { nodes: [], edges: [] },
-      disbleGraphClick: false,
-      downloadingPubs: false,
-    };
-
-    this.onGraphClick = this.onGraphClick.bind(this);
-  }
-
-  componentDidMount() {
-    this.syncPropsAndState(this.props);
-  }
-
-  syncPropsAndState(newProps) {
-    const { graph, selectedEdge } = newProps;
-    const nodes = graph.nodes.filter(n => ((n.id === selectedEdge.source_id) || (n.id === selectedEdge.target_id)));
-    const nodeIds = nodes.map(n => n.id);
-    const edges = graph.edges.filter(e => (nodeIds.includes(e.source_id) && nodeIds.includes(e.target_id)));
-
-    const subgraph = { nodes, edges };
-    this.setState({
-      subgraph, selectedEdgeId: selectedEdge.edgeIdFromKG, selectedNodeId: null,
-    }, () => {
-      this.getPublicationsFrag();
-    });
+    setSubgraph({ nodes, edges });
+    setSelectedEdgeId(selectedEdge.edgeIdFromKG);
+    setSelectedNodeId(null);
 
     if (edges.length === 1) {
-      this.setState({ disbleGraphClick: true });
+      setDisableGraphClick(true);
     }
   }
 
-  onGraphClick(event) {
-    if (this.state.disbleGraphClick) {
+  useEffect(() => {
+    syncPropsAndState();
+  }, []);
+
+  function onGraphClick(event) {
+    if (disableGraphClick) {
       return;
     }
 
-    const newState = { selectedEdgeId: null, selectedNodeId: null, selectedEdge: {} };
     if (event.edges.length !== 0) { // Clicked on an Edge
-      newState.selectedEdgeId = event.edgeObjects[0].edgeIdFromKG;
-      [newState.selectedEdge] = event.edgeObjects;
+      setSelectedEdgeId(event.edgeObjects[0].edgeIdFromKG);
+      setSelectedEdge(event.edgeObects[0]);
     } else if (event.nodes.length !== 0) { // Clicked on a node
-      [newState.selectedNodeId] = event.nodes;
+      setSelectedNodeId(event.nodes[0]);
     }
-    this.setState(newState);
   }
 
-  getNodeInfoFrag(n) {
+  function getNodeInfoFrag(n) {
     if (!n || !('name' in n)) {
       return (<div />);
     }
-    const edge = this.state.subgraph.edges.find(e => e.id === this.state.selectedEdgeId);
+    const edge = subgraph.edges.find((e) => e.id === selectedEdgeId);
     const urls = curieUrls(n.id);
     if (edge.source_database.includes('ctd')) {
       const urlObj = ctdUrls(n.type, n.equivalent_identifiers);
       urls.push(urlObj);
     }
-    const nodeTypeColorMap = getNodeTypeColorMap(this.props.concepts);
+    const nodeTypeColorMap = getNodeTypeColorMap(store.concepts);
     const backgroundColor = nodeTypeColorMap(n.type);
-    const extraFields = Object.keys(n).filter(property => !nodeBlacklist.includes(property));
+    const extraFields = Object.keys(n).filter((property) => !nodeBlacklist.includes(property));
     return (
       <Card>
-        <Card.Header style={{ backgroundColor }}>
-          <Card.Title componentClass="h3">
-            {n.name}
-            <div className="pull-right">
-              {
-                urls.map(link => <span key={shortid.generate()} style={{ margin: '0px 5px' }}><a href={link.url} target="_blank"><img src={link.iconUrl} alt={link.label} height={16} width={16} /></a></span>)
-              }
-            </div>
-          </Card.Title>
-        </Card.Header>
-        <Card.Body style={{ height: '100px', overflowY: 'auto' }}>
+        <h3 className="cardTitle" style={{ backgroundColor }}>
+          {n.name}
+          <div className="pull-right">
+            {
+              urls.map((link) => (
+                <span key={shortid.generate()} style={{ margin: '0px 5px' }}>
+                  <a href={link.url} target="_blank" rel="noopener noreferrer">
+                    <img src={link.iconUrl} alt={link.label} height={16} width={16} />
+                  </a>
+                </span>
+              ))
+            }
+          </div>
+        </h3>
+        <CardContent className="cardContent">
           <h5>
-            type: {entityNameDisplay(n.type)}
+            {`type: ${entityNameDisplay(n.type)}`}
           </h5>
           <h5>
-            id: {n.id}
+            {`id: ${n.id}`}
           </h5>
-          {extraFields.map(property => (
+          {extraFields.map((property) => (
             <h5 key={shortid.generate()}>
-              {property}: {n[property].toString()}
+              {`${property}: ${n[property].toString()}`}
             </h5>
           ))}
-        </Card.Body>
+        </CardContent>
       </Card>
     );
   }
 
-  getEdgeInfoFrag(edgeId) {
+  function getEdgeInfoFrag(edgeId) {
     if (!edgeId) {
       return (<div />);
     }
-    const edge = this.state.subgraph.edges.find(e => e.id === edgeId);
+    const edge = subgraph.edges.find((e) => e.id === edgeId);
 
-    const extraFields = Object.keys(edge).filter(property => !edgeBlacklist.includes(property));
+    const extraFields = Object.keys(edge).filter((property) => !edgeBlacklist.includes(property));
 
     let origin = ['Unknown'];
-    const sourceToOriginString = source => source; // source.substr(0, source.indexOf('.'));
+    const sourceToOriginString = (source) => source; // source.substr(0, source.indexOf('.'));
 
     if ('source_database' in edge) {
       if (Array.isArray(edge.source_database) && edge.source_database.length > 0) {
-        origin = edge.source_database.map(source => sourceToOriginString(source));
+        origin = edge.source_database.map((source) => sourceToOriginString(source));
       } else {
         origin = [sourceToOriginString(edge.source_database)];
       }
     }
     return (
       <Card>
-        <Card.Header>
-          <Card.Title componentClass="h3">
-            {edge.type}
-          </Card.Title>
-        </Card.Header>
-        <Card.Body style={{ height: '100px', overflowY: 'auto' }}>
+        <h3 className="cardTitle">
+          {edge.type}
+        </h3>
+        <CardContent className="cardContent">
           <h5>
             Established using:
             <p>
               {origin.join(', ')}
             </p>
           </h5>
-          {extraFields.map(property => (
+          {extraFields.map((property) => (
             <h5 key={shortid.generate()}>
-              {property}: {Array.isArray(edge[property]) ? edge[property].join(', ') : edge[property].toString()}
+              {`${property}: ${Array.isArray(edge[property]) ? edge[property].join(', ') : edge[property].toString()}`}
             </h5>
           ))}
-        </Card.Body>
+        </CardContent>
       </Card>
     );
   }
 
-  getPublicationsFrag() {
-    let publicationListFrag = <div><p>Click on edge above to see a list of publications.</p></div>;
-    let publicationsTitle = 'Publications';
-
-    let publications = [];
-    if (this.state.selectedEdgeId !== null) {
-      // Edge is selected
-      let edge = this.state.subgraph.edges.find(e => e.id === this.state.selectedEdgeId);
-      if (typeof edge === 'undefined') {
-        edge = this.state.subgraph.edges.find(e => e.edgeIdFromKG === this.state.selectedEdgeId);
-      }
-      if (typeof edge === 'undefined') {
-        console.log('Couldn\'t find this edge', this.state.selectedEdgeId, this.state.subgraph.edges);
-        return (
-          <div>
-            <h4 style={{ marginTop: '15px' }}>
-              An error was encountered fetching publication information.
-            </h4>
-          </div>
-        );
-      }
-
-      const sourceNode = this.state.subgraph.nodes.find(n => n.id === edge.source_id);
-      const targetNode = this.state.subgraph.nodes.find(n => n.id === edge.target_id);
-      if ('publications' in edge && Array.isArray(edge.publications)) {
-        ({ publications } = edge);
-      }
-      publicationsTitle = `${publications.length} Publications for ${sourceNode.name} and ${targetNode.name}`;
-      publicationListFrag = <PubmedList publications={publications} />;
-    } else if (this.state.selectedNodeId) {
-      // Node is selected
-      const node = this.state.subgraph.nodes.find(n => n.id === this.state.selectedNodeId);
-      if ('publications' in node && Array.isArray(node.publications)) {
-        ({ publications } = node);
-      }
-      publicationsTitle = `${publications.length} Publications for ${node.name}`;
-      publicationListFrag = <PubmedList publications={publications} />;
-    }
-
-    const downloadCallback = () => this.setState({ downloadingPubs: true }, () => this.downloadPublicationsInfo(publications));
-    const showDownload = publications.length >= 1;
-
-    const cursor = this.state.downloadingPubs ? 'progress' : 'pointer';
-    const activeCallback = this.state.downloadingPubs ? () => { } : downloadCallback;
-    const downloadTitle = this.state.downloadingPubs ? 'Downloading Please Wait' : 'Download Publications';
-    const downloadColor = this.state.downloadingPubs ? '#333' : '#000';
-    return (
-      <Card style={{ marginTop: '15px' }}>
-        <Card.Header>
-          <Card.Title componentClass="h3">
-            {publicationsTitle}
-            <div className="pull-right">
-              <div style={{ position: 'relative' }}>
-                {showDownload &&
-                  <div style={{ position: 'absolute', top: -3, right: -8 }}>
-                    <span style={{ fontSize: '22px', color: downloadColor }} title={downloadTitle}>
-                      <FaDownload onClick={activeCallback} style={{ cursor }} />
-                    </span>
-                  </div>
-                }
-              </div>
-            </div>
-          </Card.Title>
-        </Card.Header>
-        <Card.Body style={{ padding: 0 }}>
-          {publicationListFrag}
-        </Card.Body>
-      </Card>
-    );
-  }
-
-  downloadPublicationsInfo(publications) {
+  function downloadPublicationsInfo(publications) {
     const defaultInfo = {
       id: '',
       title: 'Unable to fetch publication information',
@@ -260,29 +176,31 @@ class AnswerExplorerInfo extends React.Component {
       }
 
       return new Promise((resolve, reject) => {
-        // this.appConfig.getPubmedPublications(
-        //   pmidStr,
-        //   (pub) => {
-        //     resolve(getInfo(pub));
-        //   },
-        //   (err) => {
-        //     console.log(err);
-        //     reject(defaultInfo);
-        //   },
-        // );
+        axios.request({
+          method: 'GET',
+          url: `https://robokop.renci.org/api/pubmed/${pmidStr}`,
+        })
+          .then((pub) => {
+            console.log('pub', pub);
+            resolve(getInfo(pub));
+          })
+          .catch((err) => {
+            console.log('Error', err);
+            reject(defaultInfo);
+          });
       });
     };
 
-    Promise.all(publications.map(pmid => new Promise(resolve => resolve(getPubmedInformation(pmid))))).then((data) => {
+    Promise.all(publications.map((pmid) => new Promise((resolve) => resolve(getPubmedInformation(pmid))))).then((data) => {
       // Transform the data into a json blob and give it a url
       // const json = JSON.stringify(data);
       // const blob = new Blob([json], { type: 'application/json' });
       // const url = URL.createObjectURL(blob);
 
       const fields = ['url', 'title', 'journal', 'pubdate'];
-      const replacer = (key, value) => { return value === null ? '' : value; };
+      const replacer = (key, value) => (value === null ? '' : value);
 
-      const csv = data.map(row => fields.map(f => JSON.stringify(row[f], replacer)).join(','));
+      const csv = data.map((row) => fields.map((f) => JSON.stringify(row[f], replacer)).join(','));
       csv.unshift(fields.join(','));
       const csvText = csv.join('\n');
 
@@ -295,49 +213,99 @@ class AnswerExplorerInfo extends React.Component {
       a.href = url;
       a.click();
       a.remove();
-    }).then(() => this.setState({ downloadingPubs: false }));
+    }).then(() => setDownloadingPubs(false));
   }
 
+  function getPublicationsFrag() {
+    let publicationListFrag = <div><p>Click on edge above to see a list of publications.</p></div>;
+    let publicationsTitle = 'Publications';
 
-  render() {
+    let publications = [];
+    if (selectedEdgeId !== null) {
+      // Edge is selected
+      let edge = subgraph.edges.find((e) => e.id === selectedEdgeId);
+      if (typeof edge === 'undefined') {
+        edge = subgraph.edges.find((e) => e.edgeIdFromKG === selectedEdgeId);
+      }
+      if (typeof edge === 'undefined') {
+        console.log('Couldn\'t find this edge', selectedEdgeId, subgraph.edges);
+        return (
+          <div>
+            <h4 style={{ marginTop: '15px' }}>
+              An error was encountered fetching publication information.
+            </h4>
+          </div>
+        );
+      }
+
+      const sourceNode = subgraph.nodes.find((n) => n.id === edge.source_id);
+      const targetNode = subgraph.nodes.find((n) => n.id === edge.target_id);
+      if ('publications' in edge && Array.isArray(edge.publications)) {
+        ({ publications } = edge);
+      }
+      publicationsTitle = `${publications.length} Publications for ${sourceNode.name} and ${targetNode.name}`;
+      publicationListFrag = <PubmedList publications={publications} />;
+    } else if (selectedNodeId) {
+      // Node is selected
+      const node = subgraph.nodes.find((n) => n.id === selectedNodeId);
+      if ('publications' in node && Array.isArray(node.publications)) {
+        ({ publications } = node);
+      }
+      publicationsTitle = `${publications.length} Publications for ${node.name}`;
+      publicationListFrag = <PubmedList publications={publications} />;
+    }
+
+    const downloadCallback = () => { setDownloadingPubs(true); downloadPublicationsInfo(publications); };
+    const showDownload = publications.length >= 1;
+
+    const cursor = downloadingPubs ? 'progress' : 'pointer';
+    const activeCallback = downloadingPubs ? () => { } : downloadCallback;
+    const downloadTitle = downloadingPubs ? 'Downloading Please Wait' : 'Download Publications';
+    const downloadColor = downloadingPubs ? '#333' : '#000';
     return (
-      <Row>
-        <Col md={12}>
-          <Row>
-            <Col md={12}>
-              <AnswerGraph
-                height={200}
-                subgraph={{ nodes: this.state.subgraph.nodes, edges: this.state.subgraph.edges }}
-                layoutStyle="auto"
-                layoutRandomSeed={1}
-                showSupport
-                omitEdgeLabel={false}
-                varyEdgeSmoothRoundness
-                callbackOnGraphClick={this.onGraphClick}
-                concepts={this.props.concepts}
-              />
-            </Col>
-          </Row>
-          <Row>
-            <Col md={4}>
-              {this.getNodeInfoFrag(this.state.subgraph.nodes[0])}
-            </Col>
-            <Col md={4}>
-              {this.getEdgeInfoFrag(this.state.selectedEdgeId)}
-            </Col>
-            <Col md={4}>
-              {this.getNodeInfoFrag(this.state.subgraph.nodes[1])}
-            </Col>
-          </Row>
-          <Row>
-            <Col md={12}>
-              {this.getPublicationsFrag()}
-            </Col>
-          </Row>
-        </Col>
-      </Row>
+      <Card style={{ marginTop: '15px' }}>
+        <h3>
+          {publicationsTitle}
+          <div className="pull-right">
+            <div style={{ position: 'relative' }}>
+              {showDownload && (
+                <div style={{ position: 'absolute', top: -3, right: -8 }}>
+                  <span style={{ fontSize: '22px', color: downloadColor }} title={downloadTitle}>
+                    <FaDownload onClick={activeCallback} style={{ cursor }} />
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </h3>
+        <CardContent style={{ padding: 0 }}>
+          {publicationListFrag}
+        </CardContent>
+      </Card>
     );
   }
-}
 
-export default AnswerExplorerInfo;
+  return (
+    <div id="answerExplorerContainer">
+      <AnswerGraph
+        height={200}
+        subgraph={{ nodes: subgraph.nodes, edges: subgraph.edges }}
+        layoutStyle="auto"
+        layoutRandomSeed={1}
+        showSupport
+        omitEdgeLabel={false}
+        varyEdgeSmoothRoundness
+        callbackOnGraphClick={onGraphClick}
+        concepts={store.concepts}
+      />
+      <div id="subgraphModalNodeEdgeInfo">
+        {getNodeInfoFrag(subgraph.nodes[0])}
+        {getEdgeInfoFrag(selectedEdgeId)}
+        {getNodeInfoFrag(subgraph.nodes[1])}
+      </div>
+      <div>
+        {getPublicationsFrag()}
+      </div>
+    </div>
+  );
+}

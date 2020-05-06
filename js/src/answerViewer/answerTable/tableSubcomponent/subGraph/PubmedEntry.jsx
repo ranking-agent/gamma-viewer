@@ -1,35 +1,27 @@
 import React from 'react';
-import { Media, Button } from 'react-bootstrap';
-
+import Card from '@material-ui/core/Card';
+import CardHeader from '@material-ui/core/CardHeader';
+import CardContent from '@material-ui/core/CardContent';
+import IconButton from '@material-ui/core/IconButton';
+import shortid from 'shortid';
 import { FaExternalLinkAlt } from 'react-icons/fa';
 
-// import AppConfig from '../../AppConfig';
-import config from '../../../../config.json';
 
-const shortid = require('shortid');
+const defaultFailureInfo = {
+  id: '',
+  title: 'Failed to fetch publication information',
+  authors: [],
+  journal: '',
+  source: '',
+  pubdate: '',
+  url: '',
+  doid: '',
+};
 
-class PubmedEntry extends React.Component {
-  constructor(props) {
-    super(props);
+export default function PubmedEntry(props) {
+  const { pub } = props;
 
-    // this.appConfig = new AppConfig(config);
-
-    this.defaultFailureInfo = {
-      id: '',
-      title: 'Failed to fetch publication information',
-      authors: [],
-      journal: '',
-      source: '',
-      pubdate: '',
-      url: '',
-      doid: '',
-    };
-
-    this.getPubmedInfo = this.getPubmedInfo.bind(this);
-  }
-
-  getPubmedInfo() {
-    const { pub } = this.props;
+  function getPubmedInfo() {
     let linkUrl = '#';
     let linkDisable = true;
     const paperInfo = pub;
@@ -45,7 +37,7 @@ class PubmedEntry extends React.Component {
     };
     if (!info.id) {
       // something went wrong and we got back some wonky object.
-      info = this.defaultFailureInfo;
+      info = defaultFailureInfo;
     }
     if (info.url) {
       linkDisable = false;
@@ -72,35 +64,29 @@ class PubmedEntry extends React.Component {
     };
   }
 
-  render() {
-    const {
-      info, linkUrl, linkDisable, authorFrag,
-    } = this.getPubmedInfo();
-    return (
-      <Media>
-        {info.id ? (
-          <div>
-            <Media.Left>
-              <Button disabled={linkDisable} onClick={() => window.open(linkUrl, '_blank')}>
-                <div style={{ fontSize: '36px' }}>
-                  <FaExternalLinkAlt />
-                </div>
-              </Button>
-            </Media.Left>
-            <Media.Body>
-              <Media.Heading>{info.title || 'Error'}</Media.Heading>
-              <p style={{ margin: '2px' }}>
-                {`${info.journal || 'Cannot get document summary'} - ${info.pubdate}`}
-              </p>
-              <p style={{ margin: '2px' }}>{authorFrag}</p>
-            </Media.Body>
-          </div>
-        ) : (
-          'Loading...'
-        )}
-      </Media>
-    );
-  }
+  const {
+    info, linkUrl, linkDisable, authorFrag,
+  } = getPubmedInfo();
+  return (
+    <Card>
+      {info.id ? (
+        <div>
+          <IconButton disabled={linkDisable} onClick={() => window.open(linkUrl, '_blank')}>
+            <div style={{ fontSize: '36px' }}>
+              <FaExternalLinkAlt />
+            </div>
+          </IconButton>
+          <CardHeader>{info.title || 'Error'}</CardHeader>
+          <CardContent>
+            <p style={{ margin: '2px' }}>
+              {`${info.journal || 'Cannot get document summary'} - ${info.pubdate}`}
+            </p>
+            <p style={{ margin: '2px' }}>{authorFrag}</p>
+          </CardContent>
+        </div>
+      ) : (
+        'Loading...'
+      )}
+    </Card>
+  );
 }
-
-export default PubmedEntry;

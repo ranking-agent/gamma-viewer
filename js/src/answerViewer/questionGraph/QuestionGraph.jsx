@@ -152,13 +152,15 @@ class QuestionGraph extends React.Component {
   componentDidMount() {
     this.syncStateAndProps(this.props);
   }
+
   componentWillReceiveProps(nextProps) {
     this.syncStateAndProps(nextProps);
   }
 
   shouldComponentUpdate(nextProps) {
+    const { question } = this.props;
     // Only redraw/remount component if graph components change
-    if (_.isEqual(this.props.question, nextProps.question) && this.network) {
+    if (_.isEqual(question, nextProps.question) && this.network) {
       return false;
     }
     return true;
@@ -190,10 +192,11 @@ class QuestionGraph extends React.Component {
 
   /* eslint-disable no-param-reassign */
   getDisplayGraph(rawGraph) {
+    const { concepts, nodePreProcFn, edgePreProcFn } = this.props;
     const graph = _.cloneDeep(rawGraph);
 
     // Adds vis.js specific tags to manage colors in graph
-    const nodeTypeColorMap = getNodeTypeColorMap(this.props.concepts);
+    const nodeTypeColorMap = getNodeTypeColorMap(concepts);
 
     graph.nodes.forEach((n) => {
       const backgroundColor = nodeTypeColorMap(n.type);
@@ -205,13 +208,14 @@ class QuestionGraph extends React.Component {
       };
     }); /* eslint-enable no-param-reassign */
 
-    graph.nodes = graph.nodes.map(this.props.nodePreProcFn);
-    graph.edges = graph.edges.map(this.props.edgePreProcFn);
+    graph.nodes = graph.nodes.map(nodePreProcFn);
+    graph.edges = graph.edges.map(edgePreProcFn);
     return graph;
   }
 
   getDisplayOptions(graph) {
     // potential change display depending on size/shape of graph
+    const { selectable } = this.props;
     let { height } = this.props;
     if (!(typeof height === 'string' || height instanceof String)) {
       // height is not a string must convert it
@@ -283,27 +287,29 @@ class QuestionGraph extends React.Component {
         dragView: true,
         hoverConnectedEdges: false,
         selectConnectedEdges: false,
-        selectable: this.props.selectable,
+        selectable,
         tooltipDelay: 50,
       },
     });
   }
+
   render() {
-    const { displayGraph } = this.state;
+    const { displayGraph, displayOptions } = this.state;
+    const { graphClickCallback, width } = this.props;
     const isValid = !(displayGraph == null);
 
     return (
       <div>
-        {isValid &&
+        {isValid && (
           <Graph
             key={shortid.generate()}
             graph={displayGraph}
-            options={this.state.displayOptions}
-            events={{ click: this.props.graphClickCallback }}
+            options={displayOptions}
+            events={{ click: graphClickCallback }}
             getNetwork={(network) => { this.network = network; }} // Store network reference in the component
-            style={{ width: this.props.width }}
+            style={{ width }}
           />
-        }
+        )}
       </div>
     );
   }

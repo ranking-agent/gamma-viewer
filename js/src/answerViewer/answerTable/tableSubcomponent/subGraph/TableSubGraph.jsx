@@ -1,19 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import shortid from 'shortid';
 import { FaAngleDown } from 'react-icons/fa';
 import ClickAwayListener from '@material-ui/core/ClickAwayListener';
+import Typography from '@material-ui/core/Typography';
 import Popper from '@material-ui/core/Popper';
 import Button from '@material-ui/core/Button';
+import IconButton from '@material-ui/core/IconButton';
 import Slider from '@material-ui/core/Slider';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import Tooltip from '@material-ui/core/Tooltip';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import Dialog from '@material-ui/core/Dialog';
+import CloseIcon from '@material-ui/icons/Close';
 
 import './subGraph.css';
 
 import AnswerGraph from '../../../shared/AnswerGraph';
 import Loading from '../../../shared/Loading';
-// import AnswerExplorerInfo from './AnswerExplorerInfo';
+import AnswerExplorerInfo from './AnswerExplorerInfo';
 
 function SliderLabel(props) {
   const { children, open, value } = props;
@@ -32,7 +36,7 @@ function SliderLabel(props) {
 
 export default function TableSubGraph(props) {
   const {
-    store, loadedGraph, graph,
+    store, loadedGraph, graph, activeAnswerId,
   } = props;
   const [hierarchical, toggleHierarchical] = useState(false);
   const [showModal, toggleModal] = useState(false);
@@ -41,29 +45,27 @@ export default function TableSubGraph(props) {
   const [localPruneNum, updateLocalPruneNum] = useState(10);
   const [committedPruneNum, setCommittedPruneNum] = useState(10);
   const randomSeed = useMemo(() => Math.floor(Math.random() * 100));
-
-  function handleSliderChange(value) {
-    store.updateNumAgNodes(value);
-    this.setState({ loadedGraph: false });
-  }
-
-  function modalClose() {
-    this.setState({ showModal: false });
-  }
+  const [maxSliderVal, setMaxSliderVal] = useState(1);
 
   function onGraphClick(event) {
-    // if (event.edges.length !== 0) { // Clicked on an Edge
-    //   this.setState({ selectedEdge: event.edgeObjects[0], showModal: true });
-    // } else { // Reset things since something else was clicked
-    //   this.setState({ selectedEdge: null, showModal: false });
-    // }
+    if (event.edges.length !== 0) { // Clicked on an Edge
+      setSelectedEdge(event.edgeObjects[0]);
+      toggleModal(true);
+    } else { // Reset things since something else was clicked
+      setSelectedEdge(null);
+      toggleModal(false);
+    }
   }
 
-  // useEffect(() => {
-  //   if (tab === 2) {
-  //     setKg(store.annotatedPrunedKnowledgeGraph(committedPruneNum));
-  //   }
-  // }, [tab, committedPruneNum, hierarchical]);
+  useEffect(() => {
+    store.updateNumAgSetNodes(committedPruneNum);
+  }, [committedPruneNum]);
+
+  useEffect(() => {
+    if (loadedGraph) {
+      setMaxSliderVal(store.getMaxNumAgNodes(activeAnswerId));
+    }
+  }, [loadedGraph]);
 
   return (
     <div>
@@ -106,8 +108,8 @@ export default function TableSubGraph(props) {
                     value={localPruneNum}
                     onChange={(e, v) => updateLocalPruneNum(v)}
                     onChangeCommitted={(e, v) => setCommittedPruneNum(v)}
-                    min={store.numQgNodes}
-                    max={store.numKgNodes}
+                    min={1}
+                    max={maxSliderVal}
                     ValueLabelComponent={SliderLabel}
                   />
                   <FormControlLabel
@@ -120,24 +122,25 @@ export default function TableSubGraph(props) {
               </Popper>
             </div>
           </ClickAwayListener>
-          {/* <Modal
-            show={showModal}
-            onHide={modalClose}
-            container={this}
-            bsSize="large"
+          <Dialog
+            open={showModal}
+            onClose={() => toggleModal(false)}
+            maxWidth="lg"
+            fullWidth
             aria-labelledby="AnswerExplorerModal"
           >
-            <Modal.Header closeButton>
-              <Modal.Title id="AnswerExplorerModalTitle">Edge Explorer</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <AnswerExplorerInfo
-                graph={graph}
-                selectedEdge={selectedEdge}
-                concepts={concepts}
-              />
-            </Modal.Body>
-          </Modal> */}
+            <DialogTitle disableTypography>
+              <Typography variant="h3">Edge Explorer</Typography>
+              <IconButton aria-label="close" className="edgeExplorerCloseButton" onClick={() => toggleModal(false)}>
+                <CloseIcon fontSize="large" />
+              </IconButton>
+            </DialogTitle>
+            <AnswerExplorerInfo
+              graph={graph}
+              selectedEdge={selectedEdge}
+              store={store}
+            />
+          </Dialog>
         </div>
       ) : (
         <Loading />
