@@ -1,3 +1,12 @@
 #appContainer {
     min-height: 500px;
 }
+.MuiButton-contained {
+    background-color: transparent !important;
+}
+.MuiButton-contained:hover {
+    background-color: #F0F4F8 !important;
+}
+.MuiButton-contained:disabled {
+    background-color: lightgrey !important;
+}

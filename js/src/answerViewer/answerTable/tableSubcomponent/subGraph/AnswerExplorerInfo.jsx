@@ -123,7 +123,7 @@ export default function AnswerExplorerInfo(props) {
     }
     return (
       <Card>
-        <h3 className="cardTitle">
+        <h3 className="cardTitle greyBackground">
           {edge.type}
         </h3>
         <CardContent className="cardContent">
@@ -263,8 +263,8 @@ export default function AnswerExplorerInfo(props) {
     const downloadTitle = downloadingPubs ? 'Downloading Please Wait' : 'Download Publications';
     const downloadColor = downloadingPubs ? '#333' : '#000';
     return (
-      <Card style={{ marginTop: '15px' }}>
-        <h3>
+      <Card className="publicationsContainer">
+        <h3 className="cardTitle greyBackground">
           {publicationsTitle}
           <div className="pull-right">
             <div style={{ position: 'relative' }}>

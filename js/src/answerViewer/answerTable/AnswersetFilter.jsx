@@ -97,13 +97,14 @@ export default function AnswersetFilter(props) {
                     </ExpansionPanelSummary>
                     <ExpansionPanelDetails style={{ flexDirection: 'column' }}>
                       {Object.keys(store.searchedFilter[qnodeId][propertyKey]).map((propertyValue) => {
-                        const style = { fontWeight: 'normal', whiteSpace: 'nowrap', overflow: 'auto' };
+                        const style = { fontWeight: 'normal', whiteSpace: 'nowrap' };
                         if (!store.filterKeys[qnodeId][propertyKey][propertyValue][1]) {
                           style.color = 'lightgrey';
                         }
                         return (
                           <div key={shortid.generate()} style={{ paddingLeft: '20px', display: 'flex' }}>
                             <FormControlLabel
+                              className="filterCheckboxLabel"
                               style={style}
                               control={(
                                 <Checkbox

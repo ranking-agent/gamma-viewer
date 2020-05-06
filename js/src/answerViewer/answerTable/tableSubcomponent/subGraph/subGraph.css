@@ -6,14 +6,14 @@
     box-shadow: -2px 2px 5px 0px #7777777d;
 }
 #answerExplorerContainer {
-    margin-bottom: 20px;
+    margin: 0px 20px 20px 20px;
 }
 #subgraphModalNodeEdgeInfo {
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
 }
 #subgraphModalNodeEdgeInfo > * {
-    width: 30%;
+    width: 32%;
 }
 .edgeExplorerCloseButton {
     position: absolute !important;
@@ -26,7 +26,13 @@
     margin: 0;
     font-size: 16px;
 }
+.greyBackground {
+    background-color: #F0F4F8;
+}
 .cardContent {
     max-height: 100px;
     overflow-y: auto;
+}
+.publicationsContainer {
+    margin-top: 20px;
 }
