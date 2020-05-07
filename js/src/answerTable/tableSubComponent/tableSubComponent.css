@@ -16,3 +16,10 @@
     left: 10px;
     z-index: 1;
 }
+.activeSubComponentButton {
+    background-color: #627D98 !important;
+    color: #fff !important;
+}
+.activeSubComponentButton:hover {
+    background-color: #829AB1 !important;
+}

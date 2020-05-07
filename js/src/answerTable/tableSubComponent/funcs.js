@@ -1,6 +1,6 @@
 import axios from 'axios';
 import shortid from 'shortid';
-import config from '../../../../config.json';
+// import config from '../../../config.json';
 
 function makeNodePairs(nodes, edges) {
   const axiosArray = [];

@@ -6,7 +6,7 @@ import Paper from '@material-ui/core/Paper';
 import QuestionGraph from './questionGraph/Wrapper';
 import AnswerTable from './answerTable/AnswerTable';
 import KnowledgeGraph from './knowledgeGraph/KnowledgeGraph';
-import useAnswerViewer from '../customHooks/useAnswerViewer';
+import useAnswerViewer from './customHooks/useAnswerViewer';
 
 const answerSetTabEnum = {
   questionGraph: 0,

@@ -1,7 +1,7 @@
 import React from 'react';
 import config from '../config.json';
 import './app.css';
-import AnswerViewer from './answerViewer/AnswerViewer';
+import AnswerViewer from './AnswerViewer';
 
 import ingestMessage from './ingestMessage';
 import validateMessage from '../utils/validateMessage';

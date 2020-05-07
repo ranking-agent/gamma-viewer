@@ -5,9 +5,9 @@ import ArrowDropDownIcon from '@material-ui/icons/ArrowDropDown';
 // import { DropdownList } from 'react-widgets';
 
 import AnswersetFilter from './AnswersetFilter';
-import entityNameDisplay from '../../../utils/entityNameDisplay';
-import getNodeTypeColorMap from '../../../utils/colorUtils';
-import getColumnWidth from '../../../utils/rtColumnWidth';
+import entityNameDisplay from '../../utils/entityNameDisplay';
+import getNodeTypeColorMap from '../../utils/colorUtils';
+import getColumnWidth from '../../utils/rtColumnWidth';
 import Table from './Table';
 
 import './answerTable.css';

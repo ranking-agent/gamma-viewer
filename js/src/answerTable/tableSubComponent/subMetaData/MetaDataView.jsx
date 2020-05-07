@@ -11,9 +11,9 @@ import './metadata.css';
 
 import SubTable from './SubTable';
 import Cell from './Cell';
-import getNodeTypeColorMap from '../../../../../utils/colorUtils';
-import entityNameDisplay from '../../../../../utils/entityNameDisplay';
-import getColumnWidth from '../../../../../utils/rtColumnWidth';
+import getNodeTypeColorMap from '../../../../utils/colorUtils';
+import entityNameDisplay from '../../../../utils/entityNameDisplay';
+import getColumnWidth from '../../../../utils/rtColumnWidth';
 
 export default function MetaDataView(props) {
   const { rowData, store } = props;

@@ -7,10 +7,10 @@ import axios from 'axios';
 import AnswerGraph from '../../../shared/AnswerGraph';
 import PubmedList from './PubmedList';
 
-import curieUrls from '../../../../../utils/curieUrls';
-import ctdUrls from '../../../../../utils/ctdUrls';
-import getNodeTypeColorMap from '../../../../../utils/colorUtils';
-import entityNameDisplay from '../../../../../utils/entityNameDisplay';
+import curieUrls from '../../../../utils/curieUrls';
+import ctdUrls from '../../../../utils/ctdUrls';
+import getNodeTypeColorMap from '../../../../utils/colorUtils';
+import entityNameDisplay from '../../../../utils/entityNameDisplay';
 
 const shortid = require('shortid');
 

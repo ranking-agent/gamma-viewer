@@ -82,7 +82,7 @@ export default function TableSubComponent(props) {
           className="tableSubComponentButtons"
         >
           <Button
-            color={isJsonActive ? 'primary' : ''}
+            className={isJsonActive ? 'activeSubComponentButton' : ''}
             style={{ textAlign: 'left' }}
             onClick={() => setActiveButton(answersetSubComponentEnum.json)}
           >
@@ -92,7 +92,7 @@ export default function TableSubComponent(props) {
             </span>
           </Button>
           <Button
-            color={isGraphActive ? 'primary' : ''}
+            className={isGraphActive ? 'activeSubComponentButton' : ''}
             style={{ textAlign: 'left' }}
             onClick={() => setActiveButton(answersetSubComponentEnum.graph)}
           >
@@ -102,7 +102,7 @@ export default function TableSubComponent(props) {
             </div>
           </Button>
           <Button
-            color={isMetadataActive ? 'primary' : ''}
+            className={isMetadataActive ? 'activeSubComponentButton' : ''}
             style={{ textAlign: 'left' }}
             onClick={() => setActiveButton(answersetSubComponentEnum.metadata)}
           >

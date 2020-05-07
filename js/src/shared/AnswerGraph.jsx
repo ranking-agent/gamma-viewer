@@ -3,8 +3,8 @@ import Graph from 'react-graph-vis';
 import shortid from 'shortid';
 import _ from 'lodash';
 
-import getNodeTypeColorMap from '../../../utils/colorUtils';
-import entityNameDisplay from '../../../utils/entityNameDisplay';
+import getNodeTypeColorMap from '../../utils/colorUtils';
+import entityNameDisplay from '../../utils/entityNameDisplay';
 import './answerGraph.css';
 import { graphOptions } from './defaultValues';
 

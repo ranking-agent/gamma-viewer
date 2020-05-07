@@ -1,4 +1,4 @@
-import entityNameDisplay from '../../../utils/entityNameDisplay';
+import entityNameDisplay from '../../utils/entityNameDisplay';
 
 const graphOptions = {
   autoResize: true,

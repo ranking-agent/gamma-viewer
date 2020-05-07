@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import getNodeTypeColorMap from '../../../utils/colorUtils';
-import entityNameDisplay from '../../../utils/entityNameDisplay';
+import getNodeTypeColorMap from '../../utils/colorUtils';
+import entityNameDisplay from '../../utils/entityNameDisplay';
 
 const Graph = require('react-graph-vis').default;
 
