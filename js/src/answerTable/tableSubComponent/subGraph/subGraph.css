@@ -8,6 +8,12 @@
 #answerExplorerContainer {
     margin: 0px 20px 20px 20px;
 }
+#subGraphLoading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+}
 #subgraphModalNodeEdgeInfo {
     display: flex;
     justify-content: space-between;

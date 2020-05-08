@@ -19,7 +19,7 @@ import entityNameDisplay from '../../utils/entityNameDisplay';
 
 export default function AnswersetFilter(props) {
   // Store comes from props in Table component
-  const { qnodeId, store, setFilter } = props;
+  const { qnodeId, store } = props;
   // const [search, updateSearch] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
   const [expanded, setExpanded] = useState({});
@@ -31,17 +31,14 @@ export default function AnswersetFilter(props) {
 
   function check(propertyKey, propertyValue) {
     store.updateFilterKeys(qnodeId, propertyKey, propertyValue);
-    setFilter({});
   }
 
   function checkAll(propertyKey) {
     store.checkAll(qnodeId, propertyKey);
-    setFilter({});
   }
 
   function reset() {
     store.reset(qnodeId);
-    setFilter({});
     // updateSearch('');
   }
 

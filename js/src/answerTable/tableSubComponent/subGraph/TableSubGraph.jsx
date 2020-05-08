@@ -12,11 +12,11 @@ import Tooltip from '@material-ui/core/Tooltip';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import Dialog from '@material-ui/core/Dialog';
 import CloseIcon from '@material-ui/icons/Close';
+import CircularProgress from '@material-ui/core/CircularProgress';
 
 import './subGraph.css';
 
-import AnswerGraph from '../../../shared/AnswerGraph';
-import Loading from '../../../shared/Loading';
+import AnswerGraph from '../../../shared/Old_AnswerGraph';
 import AnswerExplorerInfo from './AnswerExplorerInfo';
 
 function SliderLabel(props) {
@@ -143,7 +143,9 @@ export default function TableSubGraph(props) {
           </Dialog>
         </div>
       ) : (
-        <Loading />
+        <div id="subGraphLoading">
+          <CircularProgress size={100} thickness={5} />
+        </div>
       )}
     </div>
   );

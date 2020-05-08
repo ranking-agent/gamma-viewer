@@ -2,9 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import IconButton from '@material-ui/core/IconButton';
 import ArrowRightIcon from '@material-ui/icons/ArrowRight';
 import ArrowDropDownIcon from '@material-ui/icons/ArrowDropDown';
-// import { DropdownList } from 'react-widgets';
 
-import AnswersetFilter from './AnswersetFilter';
+// import AnswersetFilter from './AnswersetFilter';
 import entityNameDisplay from '../../utils/entityNameDisplay';
 import getNodeTypeColorMap from '../../utils/colorUtils';
 import getColumnWidth from '../../utils/rtColumnWidth';
@@ -17,20 +16,11 @@ const _ = require('lodash');
 export default function AnswerTable(props) {
   const { store, tab, concepts } = props;
   const [columns, setColumns] = useState([]);
-  const [results, setResults] = useState([]);
 
   const onExpand = useCallback((row, toggleAllRowsExpanded) => {
     toggleAllRowsExpanded(false);
     row.toggleRowExpanded(!row.isExpanded);
   }, []);
-
-  // Filter method for table columns that is case-insensitive, and matches all rows that contain
-  // provided sub-string
-  function defaultFilterMethod(filter, row, column) { // eslint-disable-line no-unused-vars
-    // console.log('filter, row, column', filter, row, column);
-    // store default filter returns a boolean
-    return store.defaultFilter(row);
-  }
 
   function getReactTableColumnSpec(columnHeaders, data) {
     const bgColorMap = getNodeTypeColorMap(concepts);
@@ -77,17 +67,17 @@ export default function AnswerTable(props) {
         colSpecObj.width = getColumnWidth(data, colSpecObj.accessor, colSpecObj.Header);
       }
       // this initializes the filter object for all nodes
-      // colSpecObj.filterable = true;
-      // colSpecObj.qnodeId = nodeId;
+      colSpecObj.filterable = true;
+      colSpecObj.qnodeId = nodeId;
       store.initializeFilter();
-      colSpecObj.Filter = ({ column: { setFilter }, store: filterStore }) => (
-        <AnswersetFilter
-          setFilter={setFilter}
-          store={filterStore}
-          qnodeId={nodeId}
-        />
-      );
-      colSpecObj.filter = store.defaultFilter;
+      // colSpecObj.Filter = ({ column: { setFilter }, store: filterStore }) => (
+      //   <AnswersetFilter
+      //     setFilter={setFilter}
+      //     store={filterStore}
+      //     qnodeId={nodeId}
+      //   />
+      // );
+      // colSpecObj.filter = store.defaultFilter;
 
       const backgroundColor = bgColorMap(colSpecObj.type);
       const columnHeader = colSpecObj.Header;
@@ -132,7 +122,6 @@ export default function AnswerTable(props) {
   function initializeState(columnHeaders, answers) {
     const columnSpec = getReactTableColumnSpec(columnHeaders, answers);
     setColumns(columnSpec);
-    setResults(answers);
   }
 
   useEffect(() => {
@@ -145,23 +134,15 @@ export default function AnswerTable(props) {
     }
   }, [tab]);
 
-  // function getFiltered() {
-  //   // this gets the actual filtered answers directly from the table. this.reactTable is a ref set below in the component
-  //   const filteredAnswers = this.reactTable.getResolvedState().sortedData;
-  //   const { store } = this.props;
-  //   store.updateFilteredAnswers(filteredAnswers);
-  //   this.setState({ expanded: {} });
-  // }
-
   return (
     <>
       {tab === 1 && (
         <>
-          {results.length ? (
+          {columns.length ? (
             <div id="answerTableContainer">
               <Table
                 columns={columns}
-                data={results}
+                data={store.filteredAnswers}
                 store={store}
               />
             </div>

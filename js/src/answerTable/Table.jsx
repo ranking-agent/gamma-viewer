@@ -12,7 +12,7 @@ import Button from '@material-ui/core/Button';
 
 import SubComponent, { answersetSubComponentEnum } from './tableSubComponent/TableSubComponent';
 import EmptyTable from './EmptyTable';
-// import AnswersetFilter from './AnswersetFilter';
+import AnswersetFilter from './AnswersetFilter';
 
 export default function Table(props) {
   const {
@@ -54,6 +54,8 @@ export default function Table(props) {
     usePagination,
   );
 
+  console.log('rendering table');
+
   return (
     <>
       <MuiTable {...getTableProps()} size="small">
@@ -76,8 +78,11 @@ export default function Table(props) {
               <TableRow>
                 {headerGroup.headers.map((column, ind) => (
                   <TableCell key={`filter-header-${ind}`}>
-                    {column.canFilter ? (
-                      column.render('Filter', { store })
+                    {column.filterable ? (
+                      <AnswersetFilter
+                        store={store}
+                        qnodeId={column.qnodeId}
+                      />
                     ) : (
                       null
                     )}

@@ -21,7 +21,8 @@ export default function useAnswerViewer(msg) {
   const [idToIndMaps, setIdToIndMaps] = useState(null);
   const [filterKeys, setFilterKeys] = useState({});
   const [searchedFilter, updateSearchedFilter] = useState({});
-  const [filteredAnswers, setFilteredAnswers] = useState({});
+  const [filteredAnswers, setFilteredAnswers] = useState([]);
+  const [answers, setAnswers] = useState([]);
 
   useEffect(() => {
     message.results.forEach((a, i) => {
@@ -341,6 +342,8 @@ export default function useAnswerViewer(msg) {
       answer.id = ans.id;
       answers.push(answer);
     });
+    setFilteredAnswers(answers);
+    setAnswers(answers);
     return { columnHeaders, answers };
   }
 
@@ -560,28 +563,89 @@ export default function useAnswerViewer(msg) {
   }
 
   /**
+   * Update filterKeys object based on filter and table filtered answers
+   */
+  function updateFilteredAnswers(newFilteredAnswers) {
+    const qgNodeIds = getQNodeIds();
+    qgNodeIds.forEach((qnodeId) => {
+      const qnodeFilter = filterKeys[qnodeId];
+      Object.keys(qnodeFilter).forEach((propertyKey) => {
+        Object.keys(qnodeFilter[propertyKey]).forEach((propertyValue) => {
+          qnodeFilter[propertyKey][propertyValue][1] = false;
+        });
+      });
+    });
+
+    newFilteredAnswers.forEach((answer) => { // loop over rows (remaining answers)
+      qgNodeIds.forEach((qnodeId) => { // loop over columns (qnodes)
+        answer[qnodeId].forEach((knode) => { // loop over knodes
+          if (filter[qnodeId][knode.id]) {
+            knode = getKgNode(knode.id);
+            Object.keys(knode).forEach((propertyKey) => { // loop over properties belonging to knode
+              propertyKey = propertyKey.replace(/ /g, '_'); // for consistency, change all spaces to underscores
+              if (propertyKey in filterKeys[qnodeId]) {
+                filterKeys[qnodeId][propertyKey][knode[propertyKey]][1] = true;
+              }
+            });
+          }
+        });
+      });
+    });
+    const newFilterKeys = _.cloneDeep(filterKeys);
+    setFilterKeys(newFilterKeys);
+    setFilteredAnswers(newFilteredAnswers);
+  }
+
+  /**
+   * Update react table based on filter object
+   * @returns Filtered rows
+   */
+  function defaultFilter() {
+    const qgNodeIds = getQNodeIds();
+    const filteredResults = answers.filter((row) => {
+      const remove = qgNodeIds.find((qnodeId) => {
+        const found = row[qnodeId].find((knode) => knode.id && !filter[qnodeId][knode.id]);
+        if (found) {
+          // if found, we want to remove
+          return true;
+        }
+        return false;
+      });
+      if (remove) {
+        // if we want to remove, filter out
+        return false;
+      }
+      return true;
+    });
+    updateFilteredAnswers(filteredResults);
+    // return filteredResults;
+  }
+
+  /**
    * Update filter object given the filterKeys object
    */
   function updateFilter(newFilterKeys) {
-    const qNodeIds = getQNodeIds();
+    const qgNodeIds = getQNodeIds();
     message.results.forEach((ans) => {
       const nodeBindings = ans.node_bindings;
-      qNodeIds.forEach((qnodeId) => {
-        let knodeIds = nodeBindings[qnodeId];
+      qgNodeIds.forEach((qgNodeId) => {
+        let knodeIds = nodeBindings[qgNodeId];
         if (!Array.isArray(knodeIds)) {
           knodeIds = [knodeIds];
         }
-        const qnodeFilter = newFilterKeys[qnodeId];
+        const qnodeFilter = newFilterKeys[qgNodeId];
         let show;
         knodeIds.forEach((knodeId) => {
           const knode = getKgNode(knodeId);
           if (knode) {
             show = !Object.keys(qnodeFilter).some((propertyKey) => !qnodeFilter[propertyKey][knode[propertyKey]][0]);
-            filter[qnodeId][knodeId] = show;
+            filter[qgNodeId][knodeId] = show;
           }
         });
       });
     });
+
+    defaultFilter();
   }
 
   /**
@@ -648,32 +712,6 @@ export default function useAnswerViewer(msg) {
   }
 
   /**
-   * Update react table based on filter object
-   * @returns Filtered rows
-   */
-  function defaultFilter(rows, id) {
-    console.log('filter', filter);
-    return rows.filter((row) => {
-      const found = row.original[id].find((knode) => knode.id && !filter[id][knode.id]);
-      if (found) {
-        return false;
-      }
-      return true;
-    });
-    // let show = true;
-    // const qnodeIds = getQNodeIds();
-    // qnodeIds.forEach((qnodeId) => {
-    //   row.original[qnodeId].forEach((knode) => {
-    //     if (knode.id && !filter[qnodeId][knode.id]) {
-    //       show = false;
-    //       return show;
-    //     }
-    //   });
-    // });
-    // return show;
-  }
-
-  /**
    * Check to see if whole column filter has any false values
    * @returns Boolean
    */
@@ -687,41 +725,6 @@ export default function useAnswerViewer(msg) {
       ));
     }
     return filtered;
-  }
-
-  /**
-   * Update filterKeys object based on filter and table filtered answers
-   */
-  function updateFilteredAnswers(newFilteredAnswers) {
-    setFilteredAnswers(newFilteredAnswers);
-    const { query_graph: qg } = message;
-    qg.nodes.forEach((qnode) => {
-      const qnodeId = qnode.id;
-      const qnodeFilter = filterKeys[qnodeId];
-      Object.keys(qnodeFilter).forEach((propertyKey) => {
-        Object.keys(qnodeFilter[propertyKey]).forEach((propertyValue) => {
-          qnodeFilter[propertyKey][propertyValue][1] = false;
-        });
-      });
-    });
-
-    newFilteredAnswers.forEach((answer) => { // loop over rows (remaining answers)
-      getQNodeIds().forEach((qnodeId) => { // loop over columns (qnodes)
-        answer.original[qnodeId].forEach((knode) => { // loop over knodes
-          if (filter[qnodeId][knode.id]) {
-            knode = getKgNode(knode.id);
-            Object.keys(knode).forEach((propertyKey) => { // loop over properties belonging to knode
-              propertyKey = propertyKey.replace(/ /g, '_'); // for consistency, change all spaces to underscores
-              if (propertyKey in filterKeys[qnodeId]) {
-                filterKeys[qnodeId][propertyKey][knode[propertyKey]][1] = true;
-              }
-            });
-          }
-        });
-      });
-    });
-    const newFilterKeys = _.cloneDeep(filterKeys);
-    setFilterKeys(newFilterKeys);
   }
 
   return {

@@ -19,7 +19,7 @@ export default function EmptyTable({ numRows, numCells }) {
       {emptyRows.map((row, i) => (
         <TableRow key={`empty-row-${i}`}>
           {emptyCells.map((cell, j) => (
-            <TableCell key={`empty-cell-${j}`}> </TableCell>
+            <TableCell key={`empty-cell-${j}`} className="emptyCell"> </TableCell>
           ))}
         </TableRow>
       ))}
