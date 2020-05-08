@@ -63,7 +63,10 @@ export default function TableSubGraph(props) {
 
   useEffect(() => {
     if (loadedGraph) {
-      setMaxSliderVal(store.getMaxNumAgNodes(activeAnswerId));
+      const maxSetNodes = store.getMaxNumAgNodes(activeAnswerId);
+      setMaxSliderVal(maxSetNodes);
+      setCommittedPruneNum(Math.min(maxSetNodes, committedPruneNum));
+      updateLocalPruneNum(Math.min(maxSetNodes, localPruneNum));
     }
   }, [loadedGraph]);
 
@@ -99,19 +102,23 @@ export default function TableSubGraph(props) {
                 anchorEl={anchorEl}
               >
                 <div className="popoverDiv">
-                  {store.numKgNodes !== committedPruneNum ? (
-                    `Pruned graph showing top ${committedPruneNum} set nodes`
-                  ) : (
-                    'Prune Set Nodes'
+                  {maxSliderVal > 1 && (
+                    <>
+                      {maxSliderVal !== committedPruneNum ? (
+                        `Pruned graph showing top ${committedPruneNum} set nodes`
+                      ) : (
+                        'Prune Set Nodes'
+                      )}
+                      <Slider
+                        value={localPruneNum}
+                        onChange={(e, v) => updateLocalPruneNum(v)}
+                        onChangeCommitted={(e, v) => setCommittedPruneNum(v)}
+                        min={1}
+                        max={maxSliderVal}
+                        ValueLabelComponent={SliderLabel}
+                      />
+                    </>
                   )}
-                  <Slider
-                    value={localPruneNum}
-                    onChange={(e, v) => updateLocalPruneNum(v)}
-                    onChangeCommitted={(e, v) => setCommittedPruneNum(v)}
-                    min={1}
-                    max={maxSliderVal}
-                    ValueLabelComponent={SliderLabel}
-                  />
                   <FormControlLabel
                     control={
                       <Checkbox checked={hierarchical} onChange={(e) => toggleHierarchical(e.target.checked)} />
