@@ -1,6 +1,6 @@
-# react-jupyter-widget-template
+# Gamma Viewer
 
-This repo holds the template for a Jupyter notebook extension that passes a JSON object to a React component that is then displayed as output in the notebook.
+Upload a Translator standard message into a jupyter notebook and view it in a useful analytic user interface.
 
 ## JS Setup
 ```
