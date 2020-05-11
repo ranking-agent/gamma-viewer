@@ -5,13 +5,13 @@
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/covar/react-jupyter-widget-template.git"
+    "url": "git+https://github.com/ranking-agent/gamma-viewer.git"
   },
   "author": "Max Wang",
   "license": "ISC",
-  "homepage": "https://gitlab.com/covar/react-jupyter-widget-template#readme",
+  "homepage": "https://github.com/ranking-agent/gamma-viewer.git#readme",
   "bugs": {
-    "url": "https://gitlab.com/covar/react-jupyter-widget-template/issues"
+    "url": "https://github.com/ranking-agent/gamma-viewer.git/issues"
   },
   "dependencies": {
     "@material-ui/core": "^4.9.10",
