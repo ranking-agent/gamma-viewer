@@ -7,6 +7,7 @@
 }
 #answerExplorerContainer {
     margin: 0px 20px 20px 20px;
+    max-height: 740px;
 }
 #subGraphLoading {
     display: flex;

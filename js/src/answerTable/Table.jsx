@@ -54,8 +54,6 @@ export default function Table(props) {
     usePagination,
   );
 
-  console.log('rendering table');
-
   return (
     <>
       <MuiTable {...getTableProps()} size="small">

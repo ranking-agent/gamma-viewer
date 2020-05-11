@@ -29,41 +29,18 @@ export default function TableSubComponent(props) {
   const [graph, setGraph] = useState({});
   const [loadedGraph, setLoadedGraph] = useState(false);
 
-  function fetchGraphSupport(axiosCalls) { // eslint-disable-line
-    // async call all of the axios calls for edge publications
-    return Promise.all(axiosCalls);
-  }
-
   // Method that updates local mobx state with activeButton and nodeId based on props
   function syncPropsWithState() {
     if (nodeId) {
       setNodeId(nodeId);
     }
-    // if (activeButtonKey) {
-    //   setActiveButton(activeButtonKey);
-    // }
     const tempRowData = store.getDenseAnswer(data.id);
     const ansId = tempRowData.id;
-    // store.updateActiveAnswerId(ansId);
-    let g = store.activeAnswerGraph(ansId);
-    // returns the array of calls to make, and an array of node pairs
-    const { calls, nodes } = makeNodePairs(g.nodes, g.edges);
-    // async calls for omnicorp publications
-    fetchGraphSupport(calls)
-      .then((result) => {
-        const pubs = [];
-        // put all the publications into one array
-        result.forEach((graphTest) => pubs.push(graphTest.data));
-        // adds support edges to graph object
-        g = addSupportEdges(g, pubs, nodes);
-        // this signifies that the graph is updated and to display the AnswerGraph
-        setGraph(g);
-        updateRowData(tempRowData);
-        setLoadedGraph(true);
-      })
-      .catch((error) => {
-        console.log('Error: ', error);
-      });
+    const g = store.activeAnswerGraph(ansId);
+
+    setGraph(g);
+    updateRowData(tempRowData);
+    setLoadedGraph(true);
   }
 
   useEffect(() => {
