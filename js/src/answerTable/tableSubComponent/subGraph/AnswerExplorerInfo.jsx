@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Card from '@material-ui/core/Card';
 import CardContent from '@material-ui/core/CardContent';
 import { FaDownload } from 'react-icons/fa';
-import axios from 'axios';
 
 import AnswerGraph from '../../../shared/AnswerGraph';
 import PubmedList from './PubmedList';
@@ -143,79 +142,6 @@ export default function AnswerExplorerInfo(props) {
     );
   }
 
-  function downloadPublicationsInfo(publications) {
-    const defaultInfo = {
-      id: '',
-      title: 'Unable to fetch publication information',
-      authors: [],
-      journal: '',
-      source: '',
-      pubdate: '',
-      url: '',
-      doid: '',
-    };
-    const getInfo = (pub) => {
-      const paperInfo = {
-        id: pub.uid,
-        title: pub.title,
-        authors: pub.authors,
-        journal: pub.fulljournalname,
-        source: pub.source,
-        pubdate: pub.pubdate,
-        url: `https://www.ncbi.nlm.nih.gov/pubmed/${pub.uid}/`,
-        doid: pub.elocationid,
-      };
-      return { ...defaultInfo, ...paperInfo };
-    };
-
-    const getPubmedInformation = (pmid) => {
-      let pmidStr = pmid.toString();
-      if ((typeof pmidStr === 'string' || pmidStr instanceof String) && (pmidStr.indexOf(':') !== -1)) {
-        // pmidStr has a colon, and therefore probably a curie, remove it.
-        pmidStr = pmidStr.substr(pmidStr.indexOf(':') + 1);
-      }
-
-      return new Promise((resolve, reject) => {
-        axios.request({
-          method: 'GET',
-          url: `https://robokop.renci.org/api/pubmed/${pmidStr}`,
-        })
-          .then((pub) => {
-            console.log('pub', pub);
-            resolve(getInfo(pub));
-          })
-          .catch((err) => {
-            console.log('Error', err);
-            reject(defaultInfo);
-          });
-      });
-    };
-
-    Promise.all(publications.map((pmid) => new Promise((resolve) => resolve(getPubmedInformation(pmid))))).then((data) => {
-      // Transform the data into a json blob and give it a url
-      // const json = JSON.stringify(data);
-      // const blob = new Blob([json], { type: 'application/json' });
-      // const url = URL.createObjectURL(blob);
-
-      const fields = ['url', 'title', 'journal', 'pubdate'];
-      const replacer = (key, value) => (value === null ? '' : value);
-
-      const csv = data.map((row) => fields.map((f) => JSON.stringify(row[f], replacer)).join(','));
-      csv.unshift(fields.join(','));
-      const csvText = csv.join('\n');
-
-      const blob = new Blob([csvText], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-
-      // Create a link with that URL and click it.
-      const a = document.createElement('a');
-      a.download = 'publications.csv';
-      a.href = url;
-      a.click();
-      a.remove();
-    }).then(() => setDownloadingPubs(false));
-  }
-
   function getPublicationsFrag() {
     let publicationListFrag = <div><p>Click on edge above to see a list of publications.</p></div>;
     let publicationsTitle = 'Publications';
@@ -255,28 +181,10 @@ export default function AnswerExplorerInfo(props) {
       publicationListFrag = <PubmedList publications={publications} />;
     }
 
-    const downloadCallback = () => { setDownloadingPubs(true); downloadPublicationsInfo(publications); };
-    const showDownload = publications.length >= 1;
-
-    const cursor = downloadingPubs ? 'progress' : 'pointer';
-    const activeCallback = downloadingPubs ? () => { } : downloadCallback;
-    const downloadTitle = downloadingPubs ? 'Downloading Please Wait' : 'Download Publications';
-    const downloadColor = downloadingPubs ? '#333' : '#000';
     return (
       <Card className="publicationsContainer">
         <h3 className="cardTitle greyBackground">
           {publicationsTitle}
-          <div className="pull-right">
-            <div style={{ position: 'relative' }}>
-              {showDownload && (
-                <div style={{ position: 'absolute', top: -3, right: -8 }}>
-                  <span style={{ fontSize: '22px', color: downloadColor }} title={downloadTitle}>
-                    <FaDownload onClick={activeCallback} style={{ cursor }} />
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
         </h3>
         <CardContent style={{ padding: 0 }}>
           {publicationListFrag}
@@ -303,9 +211,7 @@ export default function AnswerExplorerInfo(props) {
         {getEdgeInfoFrag(selectedEdgeId)}
         {getNodeInfoFrag(subgraph.nodes[1])}
       </div>
-      <div>
-        {getPublicationsFrag()}
-      </div>
+      {getPublicationsFrag()}
     </div>
   );
 }

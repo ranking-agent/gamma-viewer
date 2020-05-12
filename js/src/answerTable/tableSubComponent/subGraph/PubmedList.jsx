@@ -1,11 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { AutoSizer, List } from 'react-virtualized';
-import axios from 'axios';
-
-import PubmedEntry from './PubmedEntry';
-
-const { CancelToken } = axios;
-const axiosCancel = CancelToken.source();
 
 const styles = {
   list: {
@@ -16,54 +10,36 @@ const styles = {
   row: {
     display: 'flex',
     flexDirection: 'row',
-    padding: '5px',
+    padding: '20px',
     backgroundColor: '#fff',
     borderBottom: '1px solid #e0e0e0',
+    alignItems: 'center',
+    fontSize: '15px',
   },
 };
 
+const rowHeight = 50;
+
 export default function PubmedList(props) {
   const { publications } = props;
-  const [pubs, setPubs] = useState({});
   const list = useRef(null);
-
-  /**
-   * Cancel all axios calls on unmount
-   */
-  useEffect(() => axiosCancel.cancel('Pubmed request canceled'), []);
 
   function rowRenderer({
     index,
     key,
     style,
-    isScrolling,
   }) {
     let pmid = publications[index].toString();
     if ((typeof pmid === 'string' || pmid instanceof String) && (pmid.indexOf(':') !== -1)) {
       // pmidStr has a colon, and therefore probably a curie, remove it.
       pmid = pmid.substr(pmid.indexOf(':') + 1);
     }
-    let publication = 'Loading...';
-    if (pubs[index]) {
-      publication = <PubmedEntry pub={pubs[index]} />;
-    } else if (!isScrolling) {
-      axios.request({
-        method: 'GET',
-        url: `https://robokop.renci.org/api/pubmed/${pmid}`,
-        cancelToken: axiosCancel.token,
-      })
-        .then((res) => {
-          console.log('res', res);
-          pubs[index] = res;
-          list.forceUpdateGrid();
-          setPubs(pubs);
-        })
-        .catch((err) => {
-          if (err.message !== 'Pubmed request canceled') {
-            console.log('error', err);
-          }
-        });
-    }
+    const publication = (
+      <a href={`https://www.ncbi.nlm.nih.gov/pubmed/?term=${pmid}`} target="_blank" rel="noopener">
+        {`https://www.ncbi.nlm.nih.gov/pubmed/?term=${pmid}`}
+      </a>
+    );
+    
     return (
       <div
         style={{ ...style, ...styles.row }}
@@ -88,10 +64,10 @@ export default function PubmedList(props) {
         <List
           ref={list}
           style={styles.list}
-          height={Math.max(Math.min((publications.length * 100), 500), 100)}
+          height={Math.max(Math.min((publications.length * rowHeight), 320), 100)}
           overscanRowCount={1}
           rowCount={publications.length}
-          rowHeight={100}
+          rowHeight={rowHeight}
           noRowsRenderer={noRowsRenderer}
           rowRenderer={rowRenderer}
           width={width}
