@@ -9,7 +9,6 @@ import { IoIosGitNetwork } from 'react-icons/io';
 
 import './tableSubComponent.css';
 
-import { makeNodePairs, addSupportEdges } from './funcs';
 import TableSubGraph from './subGraph/TableSubGraph';
 import JsonView from './subJson/JsonView';
 import MetaDataView from './subMetaData/MetaDataView';
