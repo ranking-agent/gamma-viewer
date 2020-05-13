@@ -7,5 +7,5 @@ def _jupyter_nbextension_paths():
         'section': 'notebook',
         'src': 'static',
         'dest': 'GammaViewer',
-        'require': 'GammaViewer/bundle'
+        'require': 'GammaViewer/extension'
     }]
