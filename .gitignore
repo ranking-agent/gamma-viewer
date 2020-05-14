@@ -5,3 +5,5 @@ GammaViewer/static
 *.egg-info
 __pycache__
 release
+*.ipynb
+.ipynb_checkpoints
