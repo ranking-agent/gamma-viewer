@@ -155,7 +155,7 @@ setup_args = {
         ('share/jupyter/nbextensions/gamma_viewer', [
             'gamma_viewer/static/extension.js'
         ]),
-        ('etc/jupyter/nbconfig/notebook.d', ['gv.json'])
+        ('etc/jupyter/nbconfig/notebook.d', ['gamma_viewer.json'])
     ],
     'install_requires': [
         "ipython",
