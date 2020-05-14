@@ -157,11 +157,6 @@ setup_args = {
         ]),
         ('etc/jupyter/nbconfig/notebook.d', ['gamma_viewer.json'])
     ],
-    'install_requires': [
-        "ipython",
-        "jupyter-react",
-        "ipywidgets"
-    ],
     'packages': find_packages(),
     'zip_safe': False,
     'cmdclass': {

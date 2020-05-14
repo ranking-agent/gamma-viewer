@@ -9,6 +9,15 @@ git clone git@github.com:ranking-agent/gamma-viewer.git
 cd gamma-viewer
 ```
 
+You may also want to consider making a fresh environment.
+```bash
+python -m venv ~/.venv/gamma_viewer
+source ~/.venv/gamma_viewer/bin/activate
+pip install -e .
+```
+
+You need to have setuptools, wheel, and twine installed via pip.
+
 ## Release on PyPi
 Make sure you bump the version number
 ```bash
