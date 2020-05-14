@@ -4,3 +4,4 @@ node_modules
 GammaViewer/static
 *.egg-info
 __pycache__
+release

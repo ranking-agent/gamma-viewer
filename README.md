@@ -2,24 +2,28 @@
 
 Upload a Translator standard message into a jupyter notebook and view it in a useful analytic user interface.
 
-## JS Setup
+## Local Setup
+Activate your python environment of choice.
+This package also requires you have nodejs and npm installed.
 ```
-cd js
-npm install
-npm run build
-cd ..
-```
+git clone git@github.com:ranking-agent/gamma-viewer.git
+cd gamma-viewer
+pip install -e .
+jupyter nbextension install --py --symlink --sys-prefix gamma_viewer
+jupyter nbextension enable --py --sys-prefix gamma_viewer
 
-*You need to setup the JS before the Python because it needs the bundled JS.*
-## Python Setup
-```
-python setup.py develop
-```
-_You might need to also manually `pip install notebook`_
-
-## Usage
-```
 jupyter notebook
 ```
-- Open example.ipynb
-- Run code block
+
+## Usage
+```python
+    from gamma_viewer import GammaViewer
+    from IPython.display import display
+    import json
+
+    with open('translator_standard_message.json', 'r') as f:
+        res = json.load(f)
+
+    view = GammaViewer(props={"data":res})
+    display(view)
+```

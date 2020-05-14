@@ -24,18 +24,18 @@ log.info('setup.py entered')
 log.info('$PATH=%s' % os.environ['PATH'])
 
 LONG_DESCRIPTION = """
-Gamma Viewer
-======
+# Gamma Viewer
+----
 Jupyter Notebook javascript extension for viewing Translator Standard messages in an analytic UI.
-Installation
-============
-.. code-block:: bash
-    pip install gamma-viewer
-    jupyter nbextension enable --py GammaViewer
-Usage
-=====
-.. code-block:: python
-    from GammaViewer import GammaViewer
+----
+## Installation
+```bash
+    pip install gamma_viewer
+    jupyter nbextension enable --py gamma_viewer
+```
+## Usage
+```python
+    from gamma_viewer import GammaViewer
     from IPython.display import display
     import json
 
@@ -44,6 +44,7 @@ Usage
 
     view = GammaViewer(props={"data":res})
     display(view)
+```
 """
 
 
@@ -90,7 +91,7 @@ class NPM(Command):
     node_modules = os.path.join(node_root, 'node_modules')
 
     targets = [
-        os.path.join(here, 'GammaViewer', 'static', 'extension.js')
+        os.path.join(here, 'gamma_viewer', 'static', 'extension.js')
     ]
 
     def initialize_options(self):
@@ -143,15 +144,16 @@ class NPM(Command):
 
 
 setup_args = {
-    'name': 'gamma-viewer',
-    'version': '0.0.1',
+    'name': 'gamma_viewer',
+    'version': '0.0.3',
     'description': 'Interactive Translator UI for the Jupyter notebook, using React.',
     'long_description': LONG_DESCRIPTION,
+    'long_description_content_type': 'text/markdown',
     'license': 'MIT',
     'include_package_data': True,
     'data_files': [
-        ('share/jupyter/nbextensions/GammaViewer', [
-            'GammaViewer/static/extension.js'
+        ('share/jupyter/nbextensions/gamma_viewer', [
+            'gamma_viewer/static/extension.js'
         ]),
         ('etc/jupyter/nbconfig/notebook.d', ['gv.json'])
     ],
