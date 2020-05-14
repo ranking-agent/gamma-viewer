@@ -19,7 +19,7 @@ pip install -e .
 You need to have setuptools, wheel, and twine installed via pip.
 
 ## Release on PyPi
-Make sure you bump the version number
+Make sure you bump the version number in setup.py
 ```bash
 git clean -dfx
 python setup.py sdist bdist_wheel

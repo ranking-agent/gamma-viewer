@@ -145,7 +145,7 @@ class NPM(Command):
 
 setup_args = {
     'name': 'gamma_viewer',
-    'version': '0.0.3',
+    'version': '0.0.5',
     'description': 'Interactive Translator UI for the Jupyter notebook, using React.',
     'long_description': LONG_DESCRIPTION,
     'long_description_content_type': 'text/markdown',

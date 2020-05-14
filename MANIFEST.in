@@ -1,0 +1,2 @@
+recursive-include gamma_viewer/static *.*
+include gamma_viewer.json
