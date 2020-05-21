@@ -12,7 +12,7 @@ class GammaViewer(Component):
     def __init__(self, **kwargs):
         """Initialize python wrapper and forward messages from notebook."""
         # This needs to match the name in the entry js file
-        target_name = 'react.example'
+        target_name = 'react.gamma_viewer'
         super(GammaViewer, self).__init__(target_name=target_name, **kwargs)
         self.on_msg(self._handle_msg)
 

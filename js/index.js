@@ -6,7 +6,7 @@ function load_ipython_extension () {
     'base/js/namespace',
     'base/js/events',
   ], (Jupyter, events) => {
-    JupyterReact.init(Jupyter, events, 'react.example', { components: App });
+    JupyterReact.init(Jupyter, events, 'react.gamma_viewer', { components: App });
   });
 }
 

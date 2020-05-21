@@ -1,6 +1,9 @@
 .DS_Store
 node_modules
 .vscode
-GammaViewer/static
+gamma_viewer/static
 *.egg-info
 __pycache__
+release
+*.ipynb
+.ipynb_checkpoints

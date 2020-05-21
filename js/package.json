@@ -1,6 +1,6 @@
 {
-  "name": "react-jupyter-widget-template",
-  "version": "0.0.1",
+  "name": "gamma_viewer",
+  "version": "0.1.0",
   "description": "React extension inside Jupyter notebooks",
   "main": "index.js",
   "repository": {
@@ -8,7 +8,7 @@
     "url": "git+https://github.com/ranking-agent/gamma-viewer.git"
   },
   "author": "Max Wang",
-  "license": "ISC",
+  "license": "MIT",
   "homepage": "https://github.com/ranking-agent/gamma-viewer.git#readme",
   "bugs": {
     "url": "https://github.com/ranking-agent/gamma-viewer.git/issues"

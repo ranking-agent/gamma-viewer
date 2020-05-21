@@ -1,0 +1,5 @@
+{
+  "load_extensions": {
+    "gamma_viewer/extension": true
+  }
+}
