@@ -157,6 +157,9 @@ setup_args = {
         ]),
         ('etc/jupyter/nbconfig/notebook.d', ['gamma_viewer.json'])
     ],
+    'install_requires': [
+        'jupyter-react~=0.1.3'
+    ],
     'packages': find_packages(),
     'zip_safe': False,
     'cmdclass': {

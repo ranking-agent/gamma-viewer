@@ -1,5 +1,5 @@
 """Initialize jupyter nb extension path."""
-from .gamma_viewer import GammaViewer
+from .gamma_viewer import *
 
 
 def _jupyter_nbextension_paths():
