@@ -145,7 +145,7 @@ class NPM(Command):
 
 setup_args = {
     'name': 'gamma_viewer',
-    'version': '0.0.5',
+    'version': '0.1.0',
     'description': 'Interactive Translator UI for the Jupyter notebook, using React.',
     'long_description': LONG_DESCRIPTION,
     'long_description_content_type': 'text/markdown',
@@ -168,7 +168,7 @@ setup_args = {
         'sdist': js_prerelease(sdist, strict=True),
         'jsdeps': NPM,
     },
-    'author': 'CoVar',
+    'author': 'CoVar Applied Technologies',
     'url': 'https://github.com/ranking-agent/gamma-viewer',
     'keywords': [
         'ipython',
