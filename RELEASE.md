@@ -17,6 +17,9 @@ pip install -e .
 ```
 
 You need to have setuptools, wheel, and twine installed via pip.
+```bash
+pip install -r requirements-dev.txt
+```
 
 ## Release on PyPi
 Make sure you bump the version number in setup.py
