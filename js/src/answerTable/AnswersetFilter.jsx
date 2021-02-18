@@ -15,7 +15,7 @@ import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
 import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 
-import entityNameDisplay from '../../utils/entityNameDisplay';
+import strings from '../../utils/stringUtils';
 
 export default function AnswersetFilter(props) {
   // Store comes from props in Table component
@@ -90,7 +90,7 @@ export default function AnswersetFilter(props) {
                         )}
                         label="Toggle All"
                       />
-                      <span style={{ marginLeft: 10, fontWeight: 'bold' }}>{entityNameDisplay(propertyKey)}</span>
+                      <span style={{ marginLeft: 10, fontWeight: 'bold' }}>{strings.prettyDisplay(propertyKey)}</span>
                     </ExpansionPanelSummary>
                     <ExpansionPanelDetails style={{ flexDirection: 'column' }}>
                       {Object.keys(store.searchedFilter[qnodeId][propertyKey]).map((propertyValue) => {

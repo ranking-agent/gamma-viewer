@@ -6,7 +6,6 @@ import ArrowRightIcon from '@material-ui/icons/ArrowRight';
 import ArrowDropDownIcon from '@material-ui/icons/ArrowDropDown';
 
 // import AnswersetFilter from './AnswersetFilter';
-import entityNameDisplay from '../../utils/entityNameDisplay';
 import getNodeTypeColorMap from '../../utils/colorUtils';
 import BiolinkContext from '../../utils/biolinkContext';
 // import getColumnWidth from '../../utils/rtColumnWidth';
