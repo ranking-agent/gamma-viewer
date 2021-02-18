@@ -16,7 +16,8 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 
 import './subGraph.css';
 
-import AnswerGraph from '../../../shared/Old_AnswerGraph';
+import AnswerGraph from '../../../shared/AnswerGraph';
+import Loading from '../../../shared/loading/Loading';
 import AnswerExplorerInfo from './AnswerExplorerInfo';
 
 function SliderLabel(props) {
@@ -76,7 +77,6 @@ export default function TableSubGraph(props) {
         <div>
           <AnswerGraph
             subgraph={graph}
-            concepts={store.concepts}
             layoutRandomSeed={randomSeed}
             layoutStyle={hierarchical ? 'hierarchical' : ''}
             callbackOnGraphClick={onGraphClick}
@@ -150,9 +150,7 @@ export default function TableSubGraph(props) {
           </Dialog>
         </div>
       ) : (
-        <div id="subGraphLoading">
-          <CircularProgress size={100} thickness={5} />
-        </div>
+        <Loading message="Loading Graph..." positionStatic />
       )}
     </div>
   );

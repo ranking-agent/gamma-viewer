@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, {
+  useState, useEffect, useRef, useContext,
+} from 'react';
 import Graph from 'react-graph-vis';
 import shortid from 'shortid';
 import _ from 'lodash';
 
-import getNodeTypeColorMap from '../../utils/colorUtils';
-import entityNameDisplay from '../../utils/entityNameDisplay';
-import './answerGraph.css';
-import { graphOptions } from './defaultValues';
+import getNodeCategoryColorMap from '../../utils/colorUtils';
+import strings from '../../utils/stringUtils';
+import BiolinkContext from '../../utils/biolinkContext';
 
-const keyBlacklist = ['isSet', 'labels', 'label', 'equivalent_identifiers', 'type', 'id', 'degree', 'name', 'title', 'color', 'binding', 'scoreVector', 'aggScore', 'level'];
+const keyBlocklist = ['isSet', 'labels', 'label', 'equivalent_identifiers', 'type', 'id', 'degree', 'name', 'title', 'color', 'binding', 'scoreVector', 'aggScore', 'level'];
+
 const styles = {
   supportEdgeColors: {
     color: '#aaa',
@@ -17,39 +19,96 @@ const styles = {
   },
 };
 
+const defaultGraphOptions = {
+  autoResize: true,
+  // TODO: this prop would be helpful, but doesn't seem to do anything
+  // https://visjs.github.io/vis-network/docs/network/#options
+  clickToUse: true,
+  height: '500px',
+  physics: {
+    minVelocity: 1,
+    barnesHut: {
+      gravitationalConstant: -300,
+      centralGravity: 0.3,
+      springLength: 120,
+      springConstant: 0.05,
+      damping: 0.2,
+      avoidOverlap: 1,
+    },
+  },
+  layout: {
+    randomSeed: 0,
+    improvedLayout: false,
+  },
+  edges: {
+    color: {
+      color: '#000',
+      highlight: '#000',
+      hover: '#000',
+    },
+    hoverWidth: 1,
+    selectionWidth: 1,
+    // smooth: {
+    //   enabled: true,
+    //   type: 'dynamic',
+    // },
+  },
+  nodes: {
+    shape: 'box',
+    labelHighlightBold: false,
+    borderWidthSelected: 2,
+    borderWidth: 1,
+    chosen: false,
+  },
+  interaction: {
+    hover: true,
+    zoomView: true,
+    dragView: true,
+    hoverConnectedEdges: true,
+    selectConnectedEdges: false,
+    selectable: true,
+    tooltipDelay: 400,
+  },
+};
+
+/**
+ * SubGraph Viewer
+ * @param {object} subgraph
+ * @param {string} layoutStyle direction of the graph, options are auto, vertical, horizontal, or heirarchical
+ * @param {function} callbackOnGraphClick function to call on graph click
+ * @param {number} height the height of the graph
+ * @param {boolean} showSupport should the graph show support edges
+ * @param {boolean} omitEdgeLabel should the graph hide edge labels
+ * @param {boolean} varyEdgeSmoothRoundness should the graph edges curve so as not to overlap
+ * @param {number} layoutRandomSeed the seed number at which to generate the graph
+ */
 export default function AnswerGraph(props) {
   const {
-    subgraph, layoutStyle, callbackOnGraphClick, height,
-    varyEdgeSmoothRoundness, omitEdgeLabel, showSupport,
-    concepts, layoutRandomSeed,
+    subgraph, layoutStyle = 'auto', callbackOnGraphClick = () => {}, height = 600,
+    showSupport = false, omitEdgeLabel = false, varyEdgeSmoothRoundness = false,
+    layoutRandomSeed = 0,
   } = props;
-
   const [displayGraph, updateDisplayGraph] = useState(null);
-  const [displayGraphOptions, updateDisplayGraphOptions] = useState(graphOptions);
-
-  function clickCallback(event) { /* eslint-disable no-param-reassign */
-    // Add edge objects not just ids
-    event.edgeObjects = event.edges.map((eId) => displayGraph.edges.find((displayEdge) => displayEdge.id === eId));
-    event.graph = displayGraph;
-    callbackOnGraphClick(event);
-  }
+  const [displayGraphOptions, updateGraphOptions] = useState(defaultGraphOptions);
+  const network = useRef(null);
+  const { concepts } = useContext(BiolinkContext);
 
   // Bind network fit callbacks to resize graph and cancel fit callbacks on start of zoom/pan
-  function setNetworkCallbacks(network) {
+  function setNetworkCallbacks() {
     const stopLayout = () => {
-      network.stopSimulation();
-      network.physics.physicsEnabled = false;
+      network.current.stopSimulation();
+      network.current.physics.physicsEnabled = false;
     };
     const afterDraw = () => {
-      setTimeout(() => { stopLayout(); network.fit(); }, 50);
+      setTimeout(() => { stopLayout(); network.current.fit(); }, 50);
     };
     const startLayout = () => {
-      network.once('afterDrawing', afterDraw);
-      network.physics.physicsEnabled = true;
-      network.startSimulation();
+      network.current.once('afterDrawing', afterDraw);
+      network.current.physics.physicsEnabled = true;
+      network.current.startSimulation();
     };
     const toggleLayout = () => {
-      if (network.physics.physicsEnabled) {
+      if (network.current.physics.physicsEnabled) {
         stopLayout();
       } else {
         startLayout();
@@ -57,18 +116,19 @@ export default function AnswerGraph(props) {
     };
 
     try {
-      network.once('afterDrawing', afterDraw);
-      network.on('doubleClick', () => { network.off('afterDrawing'); network.fit(); toggleLayout(); });
-      network.on('zoom', () => network.off('afterDrawing'));
-      network.on('dragStart', () => network.off('afterDrawing'));
-      network.on('dragEnd', () => { setTimeout(stopLayout, 5); });
-      // network.on('stabilizationIterationsDone', () => { setTimeout(() => network.stopSimulation(), 5); });
+      network.current.once('afterDrawing', afterDraw);
+      network.current.on('doubleClick', () => { network.current.off('afterDrawing'); network.current.fit(); toggleLayout(); });
+      network.current.on('zoom', () => network.current.off('afterDrawing'));
+      network.current.on('dragStart', () => network.current.off('afterDrawing'));
+      network.current.on('dragEnd', () => { setTimeout(stopLayout, 5); });
+      // network.current.on('stabilizationIterationsDone', () => { setTimeout(() => network.current.stopSimulation(), 5); });
     } catch (err) {
-      console.log(err);
+      displayAlert('warning', 'Failed to enable graph resizing.');
     }
   }
 
   function getGraphOptions(graph) {
+    const graphOptions = _.cloneDeep(defaultGraphOptions);
     const nNodes = 'nodes' in graph ? graph.nodes.length : 0;
 
     graphOptions.height = `${height}px`;
@@ -142,7 +202,7 @@ export default function AnswerGraph(props) {
   function addTagsToGraph(graph) {
     // Adds vis.js specific tags primarily to style graph as desired
     const g = _.cloneDeep(graph);
-    const nodeTypeColorMap = getNodeTypeColorMap(concepts); // We could put standardized concepts here
+    const nodeCategoryColorMap = getNodeCategoryColorMap(concepts); // We could put standardized concepts here
 
     // remove all duplicate nodes
     const nodeIds = new Set();
@@ -164,10 +224,10 @@ export default function AnswerGraph(props) {
     });
 
     g.nodes.forEach((n) => {
-      if (Array.isArray(n.type)) {
-        n.type = concepts.find((concept) => concept !== 'named_thing' && n.type.includes(concept));
+      if (Array.isArray(n.category)) {
+        n.category = concepts.find((concept) => concept !== 'biolink:NamedThing' && n.category.includes(concept));
       }
-      const backgroundColor = nodeTypeColorMap(n.type);
+      const backgroundColor = nodeCategoryColorMap(n.category);
       n.color = {
         border: '#000000',
         background: backgroundColor,
@@ -176,25 +236,22 @@ export default function AnswerGraph(props) {
       };
 
       // Set shortened node labels and tool-tip for each node
-      n.label = n.name && n.name.length > 15 ? `${n.name.substring(0, 13)}...` : n.name || 'Unknown';
-      let extraFields = Object.keys(n).filter((property) => !keyBlacklist.includes(property));
+      n.label = n.name && n.name.length > 15 ? `${n.name.substring(0, 13)}...` : n.name || n.id || 'Unknown';
+      let extraFields = Object.keys(n).filter((property) => !keyBlocklist.includes(property));
       extraFields = extraFields.map((property) => `<div key={${shortid.generate()}}><span class="field-name">${property}: </span>${n[property]}</div>`);
-      if (!n.type) {
-        n.type = 'undefined';
-      }
       n.title = (
         `<div class="vis-tooltip-inner">
           <div><span class="title">${n.name}</span></div>
           <div><span class="field-name">id: </span>${n.id}</div>
-          <div><span class="field-name">type: </span>${entityNameDisplay(n.type)}</div>
+          <div><span class="field-name">category: </span>${strings.displayCategory(n.category)}</div>
           ${extraFields.join('')}
         </div>`
       );
     });
 
     // Separate out support and regular edges to modify things differently
-    const edgesRegular = g.edges.filter((e) => e.type !== 'literature_co-occurrence');
-    const edgesSupport = g.edges.filter((e) => e.type === 'literature_co-occurrence');
+    const edgesRegular = g.edges.filter((e) => e.predicate !== 'biolink:literature_co_occurrence');
+    const edgesSupport = g.edges.filter((e) => e.predicate === 'biolink:literature_co_occurrence');
 
     edgesSupport.forEach((e) => {
       // Make sure support edges actually have publications
@@ -211,7 +268,7 @@ export default function AnswerGraph(props) {
 
       // Check if this is a self support edge
       // These are not particularly informative in display
-      e.selfEdge = e.source_id === e.target_id;
+      e.selfEdge = e.subject === e.object;
       // e.selfEdge = false;
     });
 
@@ -231,7 +288,7 @@ export default function AnswerGraph(props) {
         }
 
         // Find a corresponding support edge
-        const sameNodesSupportEdge = edgesSupport.find((s) => (((e.source_id === s.source_id) && (e.target_id === s.target_id)) || ((e.source_id === s.target_id) && (e.target_id === s.source_id))));
+        const sameNodesSupportEdge = edgesSupport.find((s) => (((e.subject === s.subject) && (e.object === s.object)) || ((e.subject === s.object) && (e.object === s.subject))));
         if (sameNodesSupportEdge) {
           // We have a repeated edge
           sameNodesSupportEdge.duplicateEdge = true; // Mark for deletion
@@ -248,7 +305,7 @@ export default function AnswerGraph(props) {
       // Find edges that go between the same two nodes and mark them accordingly
 
       // Find a corresponding support edge
-      const sameNodesEdge = edgesRegular.filter((e2) => (((e.source_id === e2.source_id) && (e.target_id === e2.target_id)) || ((e.source_id === e2.target_id) && (e.target_id === e2.source_id))));
+      const sameNodesEdge = edgesRegular.filter((e2) => (((e.subject === e2.subject) && (e.object === e2.object)) || ((e.subject === e2.object) && (e.object === e2.subject))));
       sameNodesEdge.splice(sameNodesEdge.findIndex((e2) => e2.id === e.id), 1);
       if (sameNodesEdge.length > 0) {
         // We have a repeated edge
@@ -271,7 +328,7 @@ export default function AnswerGraph(props) {
         const n1 = g.nodes[iNode];
         for (let jNode = iNode; jNode < g.nodes.length; jNode += 1) {
           const n2 = g.nodes[jNode];
-          const theseNodeEdges = g.edges.filter((e) => (((e.source_id === n1.id) && (e.target_id === n2.id)) || ((e.target_id === n1.id) && (e.source_id === n2.id))));
+          const theseNodeEdges = g.edges.filter((e) => (((e.subject === n1.id) && (e.object === n2.id)) || ((e.object === n1.id) && (e.subject === n2.id))));
           let roundnessStep = 0.15;
           if (theseNodeEdges.length > 13) {
             // Roundness must be between 0 and 1. In general for less than 13 edges steps of 0.15 looks good
@@ -280,7 +337,7 @@ export default function AnswerGraph(props) {
             roundnessStep = 1 / (Math.ceil(theseNodeEdges.length) / 2);
           }
           theseNodeEdges.forEach((e, i) => {
-            const typeInd = (i + (e.source_id === n1.id)) % 2;
+            const typeInd = (i + (e.subject === n1.id)) % 2;
             e.smooth = {
               enabled: true,
               type: types[typeInd],
@@ -293,7 +350,7 @@ export default function AnswerGraph(props) {
     // TODO: Remove any straggler duplicate edges (Fix me)
     // const fromTo = [];
     // const deleteMe = g.edges.map((e) => {
-    //   const thisFromTo = `${e.source_id}_${e.target_id}`;
+    //   const thisFromTo = `${e.subject}_${e.object}`;
     //   if (fromTo.includes(thisFromTo)) {
     //     return true;
     //   }
@@ -305,20 +362,23 @@ export default function AnswerGraph(props) {
     // Add parameters to edges like curvature and labels and such
     g.edges = g.edges.map((e) => {
       let typeDependentParams = {};
-      let label = e.type;
+      let label = strings.displayPredicate(e.predicate);
+      if (Array.isArray(e.predicate) && e.predicate.length === 1) {
+        [e.predicate] = e.predicate;
+      }
       let nPublications = e.publications ? e.publications.length : 0;
       if (nPublications === 0 && 'nPublications' in e) {
         ({ nPublications } = e); // object destructure, grabs variable out of object
       }
       if (nPublications > 0) {
-        label = `${e.type} (${nPublications})`;
+        label = `${label} (${nPublications})`;
       }
 
       // const value = Math.ceil((Math.log(nPublications + 1) / Math.log(5)) * 2) + 1;
       // const value = Math.ceil((15 / (1 + Math.exp(-1 * (-1 + (0.02 * nPublications))))) - 3);
       const value = (4 / (1 + Math.exp(-1 * (-1 + (0.01 * nPublications))))) - 1;
 
-      if (e.type === 'literature_co-occurrence') {
+      if (e.predicate === 'biolink:literature_co_occurrence') {
         // Publication Edge
         label = `${nPublications}`; // Remove the type labeled to keep it small
 
@@ -357,8 +417,8 @@ export default function AnswerGraph(props) {
       if (varyEdgeSmoothRoundness) {
         ({ smooth } = e);
       }
-      e.from = e.source_id;
-      e.to = e.target_id;
+      e.from = e.subject;
+      e.to = e.object;
       // Assign a unique id to the edge
       if (e.id) {
         e.edgeIdFromKG = e.id;
@@ -387,42 +447,56 @@ export default function AnswerGraph(props) {
       return { ...e, ...defaultParams, ...typeDependentParams };
     });
     if (!showSupport) {
-      g.edges = g.edges.filter((e) => e.type !== 'literature_co-occurrence');
+      g.edges = g.edges.filter((e) => e.predicate !== 'biolink:literature_co_occurrence');
     }
 
     return g;
   }
 
-  useEffect(() => {
-    let graph = props.subgraph;
-    const isValid = !(graph == null) && (Object.prototype.hasOwnProperty.call(graph, 'nodes'));
+  function syncStateAndProps() {
+    let graph = _.cloneDeep(subgraph);
+
+    const isValid = !(graph == null) && 'nodes' in graph;
     if (isValid) {
       graph = addTagsToGraph(graph);
-      const newGraphOptions = getGraphOptions(graph);
-
-      updateDisplayGraph(graph);
-      updateDisplayGraphOptions(newGraphOptions);
     }
+    const graphOptions = getGraphOptions(graph);
+
+    updateDisplayGraph(graph);
+    updateGraphOptions(graphOptions);
+  }
+
+  useEffect(() => {
+    syncStateAndProps();
   }, [subgraph, layoutStyle]);
 
+  useEffect(() => {
+    if (network.current) {
+      setNetworkCallbacks();
+    }
+  }, [displayGraphOptions, network]);
+
+  function clickCallback(event) { /* eslint-disable no-param-reassign */
+    // Add edge objects not just ids
+    event.edgeObjects = event.edges.map((eId) => displayGraph.edges.find((displayEdge) => displayEdge.id === eId));
+    event.graph = displayGraph;
+    callbackOnGraphClick(event);
+  }
+
   return (
-    <div>
-      {displayGraph ? (
+    <>
+      {displayGraph !== null && (
         <div style={{ fontFamily: 'Monospace' }}>
           <Graph
-            key={shortid.generate()} // Forces component remount
+            key={displayGraphOptions.layout.hierarchical ? shortid.generate() : ''} // Forces component remount
             graph={displayGraph}
-            style={{ width: '100%', display: 'flex' }}
+            style={{ width: '100%' }}
             options={displayGraphOptions}
             events={{ click: clickCallback }}
-            getNetwork={(n) => setNetworkCallbacks(n)} // Store network reference in the component
+            getNetwork={(ref) => { network.current = ref; }} // Store network reference in the component
           />
         </div>
-      ) : (
-        <div>
-          No graph to display
-        </div>
       )}
-    </div>
+    </>
   );
 }

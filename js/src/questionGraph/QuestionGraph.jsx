@@ -1,52 +1,21 @@
-import React from 'react';
-import PropTypes from 'prop-types';
-import getNodeTypeColorMap from '../../utils/colorUtils';
-import entityNameDisplay from '../../utils/entityNameDisplay';
+import React, {
+  useEffect, useRef, useMemo, useContext,
+} from 'react';
+import _ from 'lodash';
+import shortid from 'shortid';
+
+import getNodeCategoryColorMap from '../../utils/colorUtils';
+import strings from '../../utils/stringUtils';
+import BiolinkContext from '../../utils/biolinkContext';
 
 const Graph = require('react-graph-vis').default;
-
-const shortid = require('shortid');
-const _ = require('lodash');
-
-const CardTypes = {
-  NAMEDNODETYPE: 'Named Node',
-  NODETYPE: 'Node Type',
-  NUMNODES: 'Unspecified Nodes',
-};
-
-const propTypes = {
-  concepts: PropTypes.arrayOf(PropTypes.string).isRequired,
-  question: PropTypes.shape({
-    nodes: PropTypes.array,
-    edges: PropTypes.array,
-  }),
-  width: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  height: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  selectable: PropTypes.bool, // Whether node and edge can be selected
-  nodePreProcFn: PropTypes.func,
-  edgePreProcFn: PropTypes.func,
-  // nodeSelectCallback: PropTypes.func,
-  // edgeSelectCallback: PropTypes.func,
-};
-
-const defaultProps = {
-  height: 250,
-  width: '100%',
-  question: { nodes: [], edges: [] },
-  selectable: false,
-  nodePreProcFn: defaultNodePreProc, // eslint-disable-line no-use-before-define
-  edgePreProcFn: defaultEdgePreProc, // eslint-disable-line no-use-before-define
-  // nodeSelectCallback: () => {},
-  // edgeSelectCallback: () => {},
-};
 
 // Default pre-processing method on each node object to return updated node obj
 /* eslint-disable no-param-reassign */
 function defaultNodePreProc(n) {
-  n.isSet = ('set' in n) && (((typeof n.set === typeof true) && n.set) || ((typeof n.set === 'string') && n.set === 'true'));
   n.chosen = false; // Not needed since borderWidth manually set below
   n.borderWidth = 1;
-  if (n.isSet) {
+  if (n.is_set) {
     n.shadow = {
       enabled: true,
       size: 10,
@@ -55,7 +24,7 @@ function defaultNodePreProc(n) {
       y: -10,
     };
   }
-  if (n.curieEnabled) {
+  if ((Array.isArray(n.curie) && n.curie.length)) {
     n.borderWidth = 2;
   }
   if (n.deleted) { // Set this node as hidden since it is flagged for deletion
@@ -69,25 +38,21 @@ function defaultNodePreProc(n) {
     n.shapeProperties = { borderDashes: [3, 1] };
   }
 
-  if ('label' in n) {
-    if (('nodeSpecType' in n) && (n.nodeSpecType === CardTypes.NODETYPE)) {
-      n.label = entityNameDisplay(n.label);
-    }
-    // else just keep your label
-  } else if ('name' in n) {
-    n.label = n.name;
+  // make user-displayed node label
+  if ('name' in n) {
+    n.label = `${n.id}: ${n.name}`;
   } else if (n.curie) {
     if (Array.isArray(n.curie)) {
       if (n.curie.length > 0) {
-        n.label = n.curie[0]; // eslint-disable-line prefer-destructuring
+        n.label = `${n.id}: ${n.curie[0]}`; // eslint-disable-line prefer-destructuring
       } else {
         n.label = '';
       }
     } else {
-      n.label = n.curie;
+      n.label = `${n.id}: ${n.curie}`;
     }
-  } else if ('type' in n) {
-    n.label = entityNameDisplay(n.type);
+  } else if ('category' in n) {
+    n.label = `${n.id}: ${strings.displayCategory(n.category)}`;
   } else if ('id' in n) {
     n.label = n.id;
   } else {
@@ -99,14 +64,13 @@ function defaultNodePreProc(n) {
 function defaultEdgePreProc(e) {
   let label = '';
   if ('predicate' in e) {
-    label = e.predicate;
-  } else if ('type' in e) {
-    label = e.type;
+    if (Array.isArray(e.predicate)) {
+      label = e.predicate.map((predicate) => strings.displayPredicate(predicate)).join(', ');
+    } else {
+      label = e.predicate;
+    }
   }
-  if (Array.isArray(label)) {
-    label = label.join(', ');
-  }
-  if (!('type' in e) && !(e.predicate && e.predicate.length > 0)) {
+  if (!('predicate' in e)) {
     e.arrows = {
       to: {
         enabled: false,
@@ -116,8 +80,8 @@ function defaultEdgePreProc(e) {
 
   const smooth = { forceDirection: 'none' };
 
-  e.from = e.source_id;
-  e.to = e.target_id;
+  e.from = e.subject;
+  e.to = e.object;
   e.chosen = false;
   e.width = 1;
   const defaultParams = {
@@ -136,70 +100,54 @@ function defaultEdgePreProc(e) {
 }
 /* eslint-enable no-param-reassign */
 
-class QuestionGraph extends React.Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-      displayGraph: null,
-      displayOptions: {},
-    };
-
-    this.syncStateAndProps = this.syncStateAndProps.bind(this);
-    this.setNetworkCallbacks = this.setNetworkCallbacks.bind(this);
-  }
-
-  componentDidMount() {
-    this.syncStateAndProps(this.props);
-  }
-
-  componentWillReceiveProps(nextProps) {
-    this.syncStateAndProps(nextProps);
-  }
-
-  shouldComponentUpdate(nextProps) {
-    const { question } = this.props;
-    // Only redraw/remount component if graph components change
-    if (_.isEqual(question, nextProps.question) && this.network) {
-      return false;
-    }
-    return true;
-  }
-
-  componentDidUpdate() {
-    // this.setNetworkCallbacks();
-  }
-
-  syncStateAndProps(newProps) {
-    let graph = newProps.question;
-
-    const isValid = !(graph == null) && (Object.prototype.hasOwnProperty.call(graph, 'nodes')) && (Object.prototype.hasOwnProperty.call(graph, 'edges'));
-    if (isValid) {
-      graph = this.getDisplayGraph(graph);
-    }
-    const graphOptions = this.getDisplayOptions(graph);
-
-    this.setState({ displayGraph: graph, displayOptions: graphOptions }, this.setNetworkCallbacks);
-  }
+/**
+ * Query graph view
+ * @param {Object} question contains nodes and edges
+ * @param {Boolean} selectable can you click on the graph
+ * @param {Number} height height of the graph
+ * @param {Number} width width of the graph
+ * @param {Function} graphClickCallback what happens when you click on the graph
+ * @param {Function} nodePreProcFn creation of each node properties
+ * @param {Function} edgePreProcFn creation of each edge properties
+ * @param {Boolean} interactable can you hover over nodes and get info
+ */
+export default function QuestionGraphView(props) {
+  const {
+    question = { nodes: [], edges: [] }, selectable = false, height = 250, width = '100%',
+    graphClickCallback, nodePreProcFn = defaultNodePreProc, edgePreProcFn = defaultEdgePreProc,
+    interactable = true,
+  } = props;
+  const network = useRef(null);
+  const { concepts } = useContext(BiolinkContext);
 
   // Bind network fit callbacks to resize graph and cancel fit callbacks on start of zoom/pan
-  setNetworkCallbacks() {
-    this.network.once('afterDrawing', () => this.network.fit());
-    this.network.on('doubleClick', () => this.network.fit());
-    this.network.on('zoom', () => this.network.off('afterDrawing'));
-    this.network.on('dragStart', () => this.network.off('afterDrawing'));
+  function setNetworkCallbacks() {
+    network.current.once('afterDrawing', () => network.current.fit());
+    network.current.on('doubleClick', () => network.current.fit());
+    network.current.on('zoom', () => network.current.off('afterDrawing'));
+    network.current.on('dragStart', () => network.current.off('afterDrawing'));
   }
 
+  useEffect(() => {
+    if (selectable && network.current) {
+      setNetworkCallbacks();
+    }
+  }, [network.current]);
+
   /* eslint-disable no-param-reassign */
-  getDisplayGraph(rawGraph) {
-    const { concepts, nodePreProcFn, edgePreProcFn } = this.props;
-    const graph = _.cloneDeep(rawGraph);
+  function getDisplayGraph() {
+    const graph = _.cloneDeep(question);
 
     // Adds vis.js specific tags to manage colors in graph
-    const nodeTypeColorMap = getNodeTypeColorMap(concepts);
+    const nodeCategoryColorMap = getNodeCategoryColorMap(concepts);
 
     graph.nodes.forEach((n) => {
-      const backgroundColor = nodeTypeColorMap(n.type);
+      let backgroundColor;
+      if (Array.isArray(n.category)) {
+        backgroundColor = nodeCategoryColorMap(n.category[0]);
+      } else {
+        backgroundColor = nodeCategoryColorMap(n.category);
+      }
       n.color = {
         border: '#000000',
         background: backgroundColor,
@@ -213,13 +161,16 @@ class QuestionGraph extends React.Component {
     return graph;
   }
 
-  getDisplayOptions(graph) {
+  function getDisplayOptions() {
+    if (!question || !question.nodes || !question.edges) {
+      return null;
+    }
+    const graph = _.cloneDeep(question);
     // potential change display depending on size/shape of graph
-    const { selectable } = this.props;
-    let { height } = this.props;
-    if (!(typeof height === 'string' || height instanceof String)) {
-      // height is not a string must convert it
-      height = `${height}px`;
+    let actualHeight = height;
+    if (!(typeof actualHeight === 'string' || actualHeight instanceof String)) {
+      // actualHeight is not a string must convert it
+      actualHeight = `${actualHeight}px`;
     }
 
     // default layout (LR)
@@ -228,7 +179,7 @@ class QuestionGraph extends React.Component {
       randomSeed: 0,
       hierarchical: {
         enabled: true,
-        levelSeparation: 200,
+        levelSeparation: 300,
         nodeSpacing: 200,
         treeSpacing: 200,
         blockShifting: true,
@@ -240,7 +191,7 @@ class QuestionGraph extends React.Component {
     };
 
     // Switch to a simple quick spring layout without overlap
-    if ((graph.nodes.length > 10) || (graph.edges.length >= graph.nodes.length)) {
+    if ((graph.nodes.length > 10) || (graph.edges.length > graph.nodes.length)) {
       physics = {
         minVelocity: 0.75,
         stabilization: {
@@ -263,8 +214,26 @@ class QuestionGraph extends React.Component {
       };
     }
 
+    let interaction = {
+      zoomView: false,
+      dragView: false,
+      selectable: false,
+      dragNodes: true,
+    };
+    if (interactable) {
+      interaction = {
+        hover: false,
+        zoomView: true,
+        dragView: true,
+        hoverConnectedEdges: false,
+        selectConnectedEdges: false,
+        selectable,
+        tooltipDelay: 50,
+      };
+    }
+
     return ({
-      height,
+      height: actualHeight,
       autoResize: true,
       layout,
       physics,
@@ -281,41 +250,29 @@ class QuestionGraph extends React.Component {
         shape: 'box',
         labelHighlightBold: false,
       },
-      interaction: {
-        hover: false,
-        zoomView: true,
-        dragView: true,
-        hoverConnectedEdges: false,
-        selectConnectedEdges: false,
-        selectable,
-        tooltipDelay: 50,
-      },
+      interaction,
     });
   }
 
-  render() {
-    const { displayGraph, displayOptions } = this.state;
-    const { graphClickCallback, width } = this.props;
-    const isValid = !(displayGraph == null);
+  const displayGraphDependencies = [question, nodePreProcFn, edgePreProcFn, graphClickCallback];
+  const displayGraph = useMemo(getDisplayGraph, displayGraphDependencies);
+  const displayOptions = useMemo(getDisplayOptions,
+    displayGraphDependencies.concat([selectable, height, width, interactable]));
 
-    return (
-      <div>
-        {isValid && (
-          <Graph
-            key={shortid.generate()}
-            graph={displayGraph}
-            options={displayOptions}
-            events={{ click: graphClickCallback }}
-            getNetwork={(network) => { this.network = network; }} // Store network reference in the component
-            style={{ width }}
-          />
-        )}
-      </div>
-    );
-  }
+  return (
+    <>
+      {displayGraph !== null && (
+        <Graph
+          // TODO: this random key rerenders every time.
+          // we want to do this better.
+          key={shortid.generate()}
+          graph={displayGraph}
+          options={displayOptions}
+          events={{ click: graphClickCallback }}
+          getNetwork={(ref) => { network.current = ref; }} // Store network reference in the component
+          style={{ width }}
+        />
+      )}
+    </>
+  );
 }
-
-QuestionGraph.propTypes = propTypes;
-QuestionGraph.defaultProps = defaultProps;
-
-export default QuestionGraph;

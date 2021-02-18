@@ -47,12 +47,12 @@ export default function useAnswerViewer(msg) {
   function makeMaps() {
     const kgNodeMap = graphToIndMap('knowledge_graph', 'nodes');
     const kgEdgeMap = graphToIndMap('knowledge_graph', 'edges');
-    const qgNodeMap = graphToIndMap('query_graph', 'nodes');
-    const qgEdgeMap = graphToIndMap('query_graph', 'edges');
+    const qgNodeMap = graphToIndMap('question_graph', 'nodes');
+    const qgEdgeMap = graphToIndMap('question_graph', 'edges');
     setIdToIndMaps({
       kgNodeMap, kgEdgeMap, qgNodeMap, qgEdgeMap,
     });
-    message.query_graph.nodes.forEach((node) => {
+    message.question_graph.nodes.forEach((node) => {
       if (!node.type && node.curie) {
         // if no node type, go look up in knowledge graph
         const kgNodeInd = kgNodeMap.get(node.curie);
@@ -91,21 +91,21 @@ export default function useAnswerViewer(msg) {
 
   function getQNodeIds() {
     const qNodeIds = [];
-    message.query_graph.nodes.forEach((n) => {
+    message.question_graph.nodes.forEach((n) => {
       qNodeIds.push(n.id);
     });
     return qNodeIds;
   }
   function getQEdgeIds() {
     const qEdgeIds = [];
-    message.query_graph.edges.forEach((e) => {
+    message.question_graph.edges.forEach((e) => {
       qEdgeIds.push(e.id);
     });
     return qEdgeIds;
   }
 
   function getQgNode(id) {
-    return message.query_graph.nodes[idToIndMaps.qgNodeMap.get(id)];
+    return message.question_graph.nodes[idToIndMaps.qgNodeMap.get(id)];
   }
 
   function getKgNode(nodeId) {
@@ -113,13 +113,13 @@ export default function useAnswerViewer(msg) {
   }
 
   function annotatedPrunedKnowledgeGraph(pruneNum) {
-    if (message.query_graph) {
+    if (message.question_graph) {
       // KG nodes don't always have type
       // If they don't we need to figure out which qNodes they most like correspond to
       // Then check labels and use the corresponding type
 
-      const { results, knowledge_graph: kg, query_graph: qg } = message;
-      const numQgNodes = numNodes('query_graph');
+      const { results, knowledge_graph: kg, question_graph: qg } = message;
+      const numQgNodes = numNodes('question_graph');
       const Nj = Math.round(pruneNum / numQgNodes);
 
       // Create a map between qGraph index to node id (for scoreVector)
@@ -305,7 +305,7 @@ export default function useAnswerViewer(msg) {
     const columnHeaders = [];
     const answers = [];
     // set the column headers object
-    message.query_graph.nodes.forEach((n) => {
+    message.question_graph.nodes.forEach((n) => {
       columnHeaders.push({
         Header: `${n.id}: ${entityNameDisplay(n.type)}`,
         id: n.id,
@@ -499,7 +499,7 @@ export default function useAnswerViewer(msg) {
    */
   function initializeFilterKeys() {
     // the arrays are [checked, available given other columns]
-    const { query_graph: qg } = message;
+    const { question_graph: qg } = message;
     const tempFilterKeys = {};
     qg.nodes.forEach((qnode) => {
       const qnodeId = qnode.id;
@@ -732,7 +732,7 @@ export default function useAnswerViewer(msg) {
     concepts: config.concepts,
     annotatedPrunedKnowledgeGraph,
     numKgNodes: numNodes('knowledge_graph'),
-    numQgNodes: numNodes('query_graph'),
+    numQgNodes: numNodes('question_graph'),
     answerSetTableData,
     getDenseAnswer,
     activeAnswerGraph,

@@ -10,7 +10,8 @@ import Tooltip from '@material-ui/core/Tooltip';
 import { FaAngleDown } from 'react-icons/fa';
 
 import './kg.css';
-import AnswerGraph from '../shared/Old_AnswerGraph';
+import AnswerGraph from '../shared/AnswerGraph';
+import Loading from '../shared/loading/Loading';
 
 function SliderLabel(props) {
   const { children, open, value } = props;
@@ -28,33 +29,32 @@ function SliderLabel(props) {
 }
 
 export default function KnowledgeGraph(props) {
-  const { store, concepts, tab } = props;
+  const { store } = props;
   const [hierarchical, toggleHierarchy] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [localPruneNum, updateLocalPruneNum] = useState(35);
   const [committedPruneNum, setCommittedPruneNum] = useState(35);
-  const [kg, setKg] = useState(null);
+  const [kg, setKg] = useState({ nodes: [], edges: [] });
+  const [loading, toggleLoading] = useState(true);
   const randomSeed = useRef(Math.floor(Math.random() * 100));
   const graphClickCallback = useRef(() => {});
 
   useEffect(() => {
-    if (tab === 2) {
-      setKg(store.annotatedPrunedKnowledgeGraph(committedPruneNum));
-    }
-  }, [tab, committedPruneNum, hierarchical]);
+    setKg(store.annotatedPrunedKnowledgeGraph(committedPruneNum));
+    toggleLoading(false);
+  }, [committedPruneNum, hierarchical]);
 
   return (
-    <>
-      {tab === 2 && (
-        <Paper>
-          <div
-            style={{
-              position: 'relative', minHeight: '200px', display: 'table', width: '100%',
-            }}
-          >
+    <Paper>
+      <div
+        style={{
+          position: 'relative', minHeight: '200px', display: 'table', width: '100%',
+        }}
+      >
+        {!loading ? (
+          <>
             <AnswerGraph
               subgraph={kg}
-              concepts={concepts}
               layoutRandomSeed={randomSeed.current}
               layoutStyle={hierarchical ? 'hierarchical' : ''}
               showSupport={false}
@@ -101,9 +101,11 @@ export default function KnowledgeGraph(props) {
                 </Popper>
               </div>
             </ClickAwayListener>
-          </div>
-        </Paper>
-      )}
-    </>
+          </>
+        ) : (
+          <Loading message="Loading Graph..." positionStatic />
+        )}
+      </div>
+    </Paper>
   );
 }

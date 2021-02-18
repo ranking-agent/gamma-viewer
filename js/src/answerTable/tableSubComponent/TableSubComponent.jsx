@@ -11,12 +11,12 @@ import './tableSubComponent.css';
 
 import TableSubGraph from './subGraph/TableSubGraph';
 import JsonView from './subJson/JsonView';
-import MetaDataView from './subMetaData/MetaDataView';
+// import MetaDataView from './subMetaData/MetaDataView';
 
 export const answersetSubComponentEnum = {
   graph: 1,
   json: 2,
-  metadata: 3,
+  // metadata: 3,
 };
 
 export default function TableSubComponent(props) {
@@ -48,7 +48,7 @@ export default function TableSubComponent(props) {
 
   const isJsonActive = activeButton === answersetSubComponentEnum.json;
   const isGraphActive = activeButton === answersetSubComponentEnum.graph;
-  const isMetadataActive = activeButton === answersetSubComponentEnum.metadata;
+  // const isMetadataActive = activeButton === answersetSubComponentEnum.metadata;
   return (
     <div id="tableSubComponentBackground">
       <div id="tableSubComponentContainer">
@@ -77,7 +77,7 @@ export default function TableSubComponent(props) {
               <span style={{ paddingLeft: '5px' }}>Graph</span>
             </div>
           </Button>
-          <Button
+          {/* <Button
             className={isMetadataActive ? 'activeSubComponentButton' : ''}
             style={{ textAlign: 'left' }}
             onClick={() => setActiveButton(answersetSubComponentEnum.metadata)}
@@ -86,7 +86,7 @@ export default function TableSubComponent(props) {
               <FaThList />
               <span style={{ paddingLeft: '5px' }}>Metadata</span>
             </span>
-          </Button>
+          </Button> */}
         </ButtonGroup>
         {isJsonActive && (
           <JsonView
@@ -101,12 +101,12 @@ export default function TableSubComponent(props) {
             activeAnswerId={rowData.id}
           />
         )}
-        {isMetadataActive && rowData.nodes && (
+        {/* {isMetadataActive && rowData.nodes && (
           <MetaDataView
             store={store}
             rowData={rowData.nodes}
           />
-        )}
+        )} */}
       </div>
     </div>
   );

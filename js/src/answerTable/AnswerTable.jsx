@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {
+  useState, useEffect, useCallback, useContext,
+} from 'react';
 import IconButton from '@material-ui/core/IconButton';
 import ArrowRightIcon from '@material-ui/icons/ArrowRight';
 import ArrowDropDownIcon from '@material-ui/icons/ArrowDropDown';
@@ -6,7 +8,9 @@ import ArrowDropDownIcon from '@material-ui/icons/ArrowDropDown';
 // import AnswersetFilter from './AnswersetFilter';
 import entityNameDisplay from '../../utils/entityNameDisplay';
 import getNodeTypeColorMap from '../../utils/colorUtils';
-import getColumnWidth from '../../utils/rtColumnWidth';
+import BiolinkContext from '../../utils/biolinkContext';
+// import getColumnWidth from '../../utils/rtColumnWidth';
+import strings from '../../utils/stringUtils';
 import Table from './Table';
 
 import './answerTable.css';
@@ -14,8 +18,9 @@ import './answerTable.css';
 const _ = require('lodash');
 
 export default function AnswerTable(props) {
-  const { store, tab, concepts } = props;
+  const { store, tab } = props;
   const [columns, setColumns] = useState([]);
+  const { concepts } = useContext(BiolinkContext);
 
   const onExpand = useCallback((row, toggleAllRowsExpanded) => {
     toggleAllRowsExpanded(false);
@@ -41,10 +46,10 @@ export default function AnswerTable(props) {
           if (setNodes.length === 1) {
             return setNodes[0].name ? [setNodes[0].name] : [setNodes[0].id];
           }
-          return [entityNameDisplay(colSpecObj.type), `[${setNodes.length}]`];
+          return [strings.displayCategory(colSpecObj.category), `[${setNodes.length}]`];
         };
         colSpecObj.Cell = (row) => {
-          const setNodes = store.getSetNodes(row.index, row.column.id);
+          const setNodes = store.getSetNodes(row.row.index, row.column.id);
           const cellText = cellTextFn(setNodes);
           return (
             <span>
@@ -58,13 +63,13 @@ export default function AnswerTable(props) {
             </span>
           );
         };
-        colSpecObj.width = getColumnWidth(
-          data, colSpecObj.accessor, colSpecObj.Header,
-          (setNodes) => `${cellTextFn(setNodes).join(' ')}   `,
-        );
+        // colSpecObj.width = getColumnWidth(
+        //   data, colSpecObj.accessor, colSpecObj.Header,
+        //   (setNodes) => `${cellTextFn(setNodes).join(' ')}   `,
+        // );
       } else {
         colSpecObj.accessor = (d) => (d[nodeId][0].name ? d[nodeId][0].name : d[nodeId][0].id);
-        colSpecObj.width = getColumnWidth(data, colSpecObj.accessor, colSpecObj.Header);
+        // colSpecObj.width = getColumnWidth(data, colSpecObj.accessor, colSpecObj.Header);
       }
       // this initializes the filter object for all nodes
       colSpecObj.filterable = true;
@@ -79,7 +84,7 @@ export default function AnswerTable(props) {
       // );
       // colSpecObj.filter = store.defaultFilter;
 
-      const backgroundColor = bgColorMap(colSpecObj.type);
+      const backgroundColor = bgColorMap(colSpecObj.category);
       const columnHeader = colSpecObj.Header;
       colSpecObj.Header = () => (
         <div style={{ backgroundColor }}>{columnHeader}</div>
@@ -95,7 +100,9 @@ export default function AnswerTable(props) {
           {row.isExpanded ? <ArrowDropDownIcon /> : <ArrowRightIcon />}
         </IconButton>
       ),
-      width: 50,
+      minWidth: 50,
+      width: 75,
+      maxWidth: 100,
       // filterable: false,
       disableFilters: true,
     });
@@ -103,6 +110,9 @@ export default function AnswerTable(props) {
     colHeaders.push({
       Header: 'Rank',
       id: 'score',
+      minWidth: 50,
+      width: 100,
+      maxWidth: 100,
       // width: 75,
       // filterable: false,
       disableFilters: true,
@@ -125,33 +135,29 @@ export default function AnswerTable(props) {
   }
 
   useEffect(() => {
-    if (tab === 1 && !columns.length) {
+    if (!columns.length) {
       if (store.unknownNodes) {
         window.alert('We were able to retrieve the answers to this question. However, it seems there was an error retrieving some of the nodes. If you would like complete answers, please try asking this question again.');
       }
       const { columnHeaders, answers } = store.answerSetTableData();
       initializeState(columnHeaders, answers);
     }
-  }, [tab]);
+  }, []);
 
   return (
     <>
-      {tab === 1 && (
-        <>
-          {columns.length ? (
-            <div id="answerTableContainer">
-              <Table
-                columns={columns}
-                data={store.filteredAnswers}
-                store={store}
-              />
-            </div>
-          ) : (
-            <div>
-              There do not appear to be any answers for this question.
-            </div>
-          )}
-        </>
+      {columns.length ? (
+        <div id="answerTableContainer">
+          <Table
+            columns={columns}
+            data={store.filteredAnswers}
+            store={store}
+          />
+        </div>
+      ) : (
+        <div>
+          There do not appear to be any answers for this question.
+        </div>
       )}
     </>
   );

@@ -1,34 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Card from '@material-ui/core/Card';
 import CardContent from '@material-ui/core/CardContent';
-import { FaDownload } from 'react-icons/fa';
+import shortid from 'shortid';
 
+import BiolinkContext from '../../../../utils/biolinkContext';
 import AnswerGraph from '../../../shared/AnswerGraph';
-import PubmedList from './PubmedList';
 
 import curieUrls from '../../../../utils/curieUrls';
 import ctdUrls from '../../../../utils/ctdUrls';
-import getNodeTypeColorMap from '../../../../utils/colorUtils';
-import entityNameDisplay from '../../../../utils/entityNameDisplay';
+import getNodeCategoryColorMap from '../../../../utils/colorUtils';
+import strings from '../../../../utils/stringUtils';
 
-const shortid = require('shortid');
+import PubmedList from './PubmedList';
 
-const nodeBlacklist = ['isSet', 'labels', 'label', 'equivalent_identifiers', 'type', 'id', 'degree', 'name', 'title', 'color', 'binding'];
-const edgeBlacklist = ['binding', 'ctime', 'id', 'publications', 'source_database', 'source_id', 'target_id', 'type'];
+const nodeBlocklist = [
+  'isSet', 'labels', 'label', 'equivalent_identifiers', 'category',
+  'id', 'degree', 'name', 'title', 'color', 'binding', 'level', 'attributes',
+];
+const edgeBlocklist = [
+  'binding', 'ctime', 'id', 'publications', 'source_database',
+  'subject', 'object', 'predicate', 'attributes',
+];
 
 export default function AnswerExplorerInfo(props) {
-  const { graph, selectedEdge: parentSelectedEdge, store } = props;
+  const { graph, selectedEdge: parentSelectedEdge } = props;
   const [selectedEdge, setSelectedEdge] = useState(parentSelectedEdge);
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [subgraph, setSubgraph] = useState({ nodes: [], edges: [] });
   const [disableGraphClick, setDisableGraphClick] = useState(false);
-  const [downloadingPubs, setDownloadingPubs] = useState(false);
+
+  const { concepts } = useContext(BiolinkContext);
 
   function syncPropsAndState() {
-    const nodes = graph.nodes.filter((n) => ((n.id === selectedEdge.source_id) || (n.id === selectedEdge.target_id)));
+    const nodes = graph.nodes.filter((n) => ((n.id === selectedEdge.subject) || (n.id === selectedEdge.object)));
     const nodeIds = nodes.map((n) => n.id);
-    const edges = graph.edges.filter((e) => (nodeIds.includes(e.source_id) && nodeIds.includes(e.target_id)));
+    const edges = graph.edges.filter((e) => (nodeIds.includes(e.subject) && nodeIds.includes(e.object)));
 
     setSubgraph({ nodes, edges });
     setSelectedEdgeId(selectedEdge.edgeIdFromKG);
@@ -57,22 +64,23 @@ export default function AnswerExplorerInfo(props) {
   }
 
   function getNodeInfoFrag(n) {
-    if (!n || !('name' in n)) {
-      return (<div />);
+    if (!n) {
+      return <div />;
     }
+    const title = n.name || n.id;
     const edge = subgraph.edges.find((e) => e.id === selectedEdgeId);
     const urls = curieUrls(n.id);
-    if (edge.source_database.includes('ctd')) {
-      const urlObj = ctdUrls(n.type, n.equivalent_identifiers);
+    if (edge.source_database && edge.source_database.includes('ctd')) {
+      const urlObj = ctdUrls(n.category, n.equivalent_identifiers);
       urls.push(urlObj);
     }
-    const nodeTypeColorMap = getNodeTypeColorMap(store.concepts);
-    const backgroundColor = nodeTypeColorMap(n.type);
-    const extraFields = Object.keys(n).filter((property) => !nodeBlacklist.includes(property));
+    const nodeCategoryColorMap = getNodeCategoryColorMap(concepts);
+    const backgroundColor = nodeCategoryColorMap(n.category);
+    const extraFields = Object.keys(n).filter((property) => !nodeBlocklist.includes(property));
     return (
       <Card>
         <h3 className="cardTitle" style={{ backgroundColor }}>
-          {n.name}
+          {title}
           <div className="pull-right">
             {
               urls.map((link) => (
@@ -87,7 +95,7 @@ export default function AnswerExplorerInfo(props) {
         </h3>
         <CardContent className="cardContent">
           <h5>
-            {`type: ${entityNameDisplay(n.type)}`}
+            {`category: ${strings.displayCategory(n.category)}`}
           </h5>
           <h5>
             {`id: ${n.id}`}
@@ -108,9 +116,9 @@ export default function AnswerExplorerInfo(props) {
     }
     const edge = subgraph.edges.find((e) => e.id === edgeId);
 
-    const extraFields = Object.keys(edge).filter((property) => !edgeBlacklist.includes(property));
+    const extraFields = Object.keys(edge).filter((property) => !edgeBlocklist.includes(property));
 
-    let origin = ['Unknown'];
+    let origin = null;
     const sourceToOriginString = (source) => source; // source.substr(0, source.indexOf('.'));
 
     if ('source_database' in edge) {
@@ -123,15 +131,17 @@ export default function AnswerExplorerInfo(props) {
     return (
       <Card>
         <h3 className="cardTitle greyBackground">
-          {edge.type}
+          {strings.displayPredicate(edge.predicate)}
         </h3>
         <CardContent className="cardContent">
-          <h5>
-            Established using:
-            <p>
-              {origin.join(', ')}
-            </p>
-          </h5>
+          {origin && (
+            <h5>
+              Established using:
+              <p>
+                {origin.join(', ')}
+              </p>
+            </h5>
+          )}
           {extraFields.map((property) => (
             <h5 key={shortid.generate()}>
               {`${property}: ${Array.isArray(edge[property]) ? edge[property].join(', ') : edge[property].toString()}`}
@@ -154,7 +164,6 @@ export default function AnswerExplorerInfo(props) {
         edge = subgraph.edges.find((e) => e.edgeIdFromKG === selectedEdgeId);
       }
       if (typeof edge === 'undefined') {
-        console.log('Couldn\'t find this edge', selectedEdgeId, subgraph.edges);
         return (
           <div>
             <h4 style={{ marginTop: '15px' }}>
@@ -164,12 +173,13 @@ export default function AnswerExplorerInfo(props) {
         );
       }
 
-      const sourceNode = subgraph.nodes.find((n) => n.id === edge.source_id);
-      const targetNode = subgraph.nodes.find((n) => n.id === edge.target_id);
+      const sourceNode = subgraph.nodes.find((n) => n.id === edge.subject);
+      const targetNode = subgraph.nodes.find((n) => n.id === edge.object);
       if ('publications' in edge && Array.isArray(edge.publications)) {
         ({ publications } = edge);
       }
-      publicationsTitle = `${publications.length} Publications for ${sourceNode.name} and ${targetNode.name}`;
+      publicationsTitle = `${publications.length} Publications for ${sourceNode.name || sourceNode.id}
+        and ${targetNode.name || targetNode.id}`;
       publicationListFrag = <PubmedList publications={publications} />;
     } else if (selectedNodeId) {
       // Node is selected
@@ -201,10 +211,11 @@ export default function AnswerExplorerInfo(props) {
         layoutStyle="auto"
         layoutRandomSeed={1}
         showSupport
+        // TODO: add this field to the AnswerGraph
+        // interactable={false}
         omitEdgeLabel={false}
         varyEdgeSmoothRoundness
         callbackOnGraphClick={onGraphClick}
-        concepts={store.concepts}
       />
       <div id="subgraphModalNodeEdgeInfo">
         {getNodeInfoFrag(subgraph.nodes[0])}

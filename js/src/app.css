@@ -1,5 +1,5 @@
-#appContainer {
-    min-height: 500px;
+.appContainer {
+    min-height: 200px;
 }
 .MuiButton-contained {
     background-color: transparent !important;
