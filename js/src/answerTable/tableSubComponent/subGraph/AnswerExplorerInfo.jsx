@@ -102,7 +102,7 @@ export default function AnswerExplorerInfo(props) {
           </h5>
           {extraFields.map((property) => (
             <h5 key={shortid.generate()}>
-              {`${property}: ${n[property].toString()}`}
+              {`${property}: ${n[property]}`}
             </h5>
           ))}
         </CardContent>
@@ -144,7 +144,7 @@ export default function AnswerExplorerInfo(props) {
           )}
           {extraFields.map((property) => (
             <h5 key={shortid.generate()}>
-              {`${property}: ${Array.isArray(edge[property]) ? edge[property].join(', ') : edge[property].toString()}`}
+              {`${property}: ${Array.isArray(edge[property]) ? edge[property].join(', ') : edge[property]}`}
             </h5>
           ))}
         </CardContent>
