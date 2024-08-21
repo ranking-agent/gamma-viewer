@@ -1,3 +1,5 @@
+# ARCHIVED: This tool is not being updated anymore and is on an old version of TRAPI.
+
 # Gamma Viewer
 
 Upload a Translator standard message into a jupyter notebook and view it in a useful analytic user interface.
